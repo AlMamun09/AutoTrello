@@ -1,7 +1,12 @@
 import { getSettings } from './settings';
 import type { Project, Task } from './db';
 
-export async function pushToTrello(project: Project, tasks: Task[], onProgress: (msg: string) => void) {
+export type TrelloSyncSelection = {
+  columns?: string[];
+  taskIds?: string[];
+};
+
+export async function pushToTrello(project: Project, tasks: Task[], onProgress: (msg: string) => void, selection: TrelloSyncSelection = {}) {
   const settings = getSettings();
   const { trelloApiKey, trelloToken } = settings;
   const key = trelloApiKey.trim();
@@ -26,9 +31,17 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
     await fetch(`${baseUrl}/lists/${list.id}/closed?value=true&${auth}`, { method: 'PUT' });
   }
 
-  // 2. Create Lists in Order (based on tasks or template)
+  const selectedTaskIds = new Set(selection.taskIds ?? tasks.map(t => t.id));
+  const selectedColumns = new Set(selection.columns ?? Array.from(new Set(tasks.map(t => t.column))));
+  const tasksToSync = tasks.filter(t => selectedTaskIds.has(t.id) && selectedColumns.has(t.column));
+
+  if (tasksToSync.length === 0) {
+    throw new Error('Select at least one card to sync.');
+  }
+
+  // 2. Create selected lists
   onProgress('Setting up columns...');
-  const uniqueColumns = Array.from(new Set(tasks.map(t => t.column)));
+  const uniqueColumns = Array.from(selectedColumns).filter(col => tasksToSync.some(t => t.column === col));
   const listIds: Record<string, string> = {};
   
   // Create lists one by one to preserve order
@@ -50,8 +63,8 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
     'Low': 'green'
   };
 
-  const allPriorities = Array.from(new Set(tasks.map(t => t.priority)));
-  const allLabels = Array.from(new Set(tasks.flatMap(t => t.labels || [])));
+  const allPriorities = Array.from(new Set(tasksToSync.map(t => t.priority)));
+  const allLabels = Array.from(new Set(tasksToSync.flatMap(t => t.labels || [])));
 
   for (const prio of allPriorities) {
     const res = await fetch(`${baseUrl}/boards/${board.id}/labels?name=${encodeURIComponent(prio)}&color=${priorityColors[prio] || 'blue'}&${auth}`, { method: 'POST' });
@@ -68,9 +81,9 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
   // 4. Push Tasks
   onProgress('Pushing tasks...');
   let count = 0;
-  for (const task of tasks) {
+  for (const task of tasksToSync) {
     count++;
-    onProgress(`Syncing card ${count}/${tasks.length}: ${task.title}`);
+    onProgress(`Syncing card ${count}/${tasksToSync.length}: ${task.title}`);
     
     const listId = listIds[task.column];
     if (!listId) continue;
@@ -80,7 +93,15 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
       ...(task.labels || []).map(l => labelIds[`lbl:${l}`])
     ].filter(Boolean);
 
-    const cardRes = await fetch(`${baseUrl}/cards?idList=${listId}&name=${encodeURIComponent(task.title)}&desc=${encodeURIComponent(task.description || '')}&idLabels=${taskLabelIds.join(',')}&${auth}`, { method: 'POST' });
+    const descriptionParts = [
+      task.description || '',
+      task.assignee ? `\nAssignee: ${task.assignee}` : '',
+      task.estimate ? `\nEstimate: ${task.estimate}` : '',
+      task.start_date ? `\nStart: ${task.start_date}` : '',
+      task.comments?.length ? `\nComments:\n${task.comments.map(c => `- ${c}`).join('\n')}` : '',
+    ].filter(Boolean);
+    const due = task.due_date ? `&due=${encodeURIComponent(task.due_date)}` : '';
+    const cardRes = await fetch(`${baseUrl}/cards?idList=${listId}&name=${encodeURIComponent(task.title)}&desc=${encodeURIComponent(descriptionParts.join('\n'))}&idLabels=${taskLabelIds.join(',')}${due}&${auth}`, { method: 'POST' });
     const card = await cardRes.json();
 
     // 5. Add Checklists for Subtasks
@@ -94,7 +115,7 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
     }
 
     // Small delay to prevent rate limiting if board is huge
-    if (tasks.length > 30) await new Promise(r => setTimeout(r, 100));
+    if (tasksToSync.length > 30) await new Promise(r => setTimeout(r, 100));
   }
 
   onProgress('Sync completed successfully!');

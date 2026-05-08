@@ -8,7 +8,7 @@ import { LandingPage } from './components/LandingPage';
 import { getProjects, type Project } from './lib/db';
 
 import { Outlet } from 'react-router-dom';
-import { ZapIcon, GearIcon } from '@/lib/icons';
+import { ZapIcon, GearIcon, CodeIcon, BookOpenIcon, TrendingUpIcon, BriefcaseIcon, FolderIcon, UsersIcon, TagIcon, SettingsIcon, LayoutIcon } from '@/lib/icons';
 
 // ── Sidebar ────────────────────────────────────────────────────────
 function AppSidebar({
@@ -27,18 +27,32 @@ function AppSidebar({
   return (
     <aside className={`at-sidebar${collapsed ? ' collapsed' : ''}`}>
       {/* Logo */}
-      <div className="at-sidebar-logo">
-        <ZapIcon />
-        <span className="logo-text">AutoTrello</span>
-      </div>
+      <Link to="/" className="at-sidebar-logo" style={{ textDecoration: 'none' }}>
+        <span className="at-sidebar-brand-mark">
+          <ZapIcon size={20} color="#07111F" />
+        </span>
+        <span className="logo-text">AutoTrello AI</span>
+      </Link>
 
       {/* Nav */}
       <nav className="at-sidebar-nav">
         <div className="at-sidebar-section">Projects</div>
 
         {projects.map((p) => {
-          const icons: Record<string, string> = { sdlc: '📦', education: '🎓', marketing: '📣', business: '🏢' };
-          const icon = icons[p.template] || '📁';
+          const icons: Record<string, any> = {
+            ai: <ZapIcon />,
+            sdlc: <CodeIcon />,
+            education: <BookOpenIcon />,
+            marketing: <TrendingUpIcon />,
+            smallbiz: <BriefcaseIcon />,
+            business: <BriefcaseIcon />,
+            hr: <UsersIcon />,
+            crm: <TagIcon />,
+            sales: <TagIcon />,
+            operations: <SettingsIcon />,
+            design: <LayoutIcon />
+          };
+          const icon = icons[p.template] || <FolderIcon />;
           const isActive = location.pathname === `/project/${p.id}`;
           return (
             <Link key={p.id} to={`/project/${p.id}`} className={`at-nav-item${isActive ? ' active' : ''}`}>
@@ -51,21 +65,18 @@ function AppSidebar({
         <Link
           to="/project/new"
           className="at-nav-item"
-          style={{ margin: '8px 14px', borderRadius: 6, border: '1px dashed rgba(255,255,255,0.2)', borderLeft: '1px dashed rgba(255,255,255,0.2)', justifyContent: 'center', padding: '7px' }}
+          style={{ marginTop: 8, border: '1px dashed rgba(184,247,212,0.22)', justifyContent: 'center', padding: '9px' }}
         >
-          <span className="nav-label" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>+ New Project</span>
+          <span className="nav-icon">+</span>
+          <span className="nav-label" style={{ color: 'var(--at-primary)', fontSize: 12 }}>New Project</span>
         </Link>
       </nav>
 
       {/* Footer */}
       <div className="at-sidebar-footer">
-        <div className="at-avatar">AM</div>
-        <div className="at-user-info" style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Alex Morgan</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Pro Plan</div>
-        </div>
-        <button onClick={onSettingsClick} style={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', padding: 4 }} className="at-nav-item" title="Settings">
+        <button onClick={onSettingsClick} className="at-settings-button" title="Settings">
           <GearIcon />
+          <span className="at-settings-label">Settings</span>
         </button>
       </div>
 
@@ -73,11 +84,12 @@ function AppSidebar({
       <button
         onClick={onToggle}
         style={{
-          position: 'absolute', top: 18, right: -12,
+          position: 'absolute', top: '50%', right: -12,
+          transform: 'translateY(-50%)',
           width: 24, height: 24, borderRadius: '50%',
-          background: '#1E293B', border: '1px solid #334155',
+          background: '#0D1B2E', border: '1px solid rgba(184,247,212,0.16)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#64748B', zIndex: 10,
+          color: '#B8F7D4', zIndex: 10,
         }}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -94,6 +106,7 @@ function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const location = useLocation();
+  const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
     getProjects().then(setProjects);
@@ -101,12 +114,14 @@ function AppLayout() {
 
   return (
     <div className="at-shell">
-      <AppSidebar
-        projects={projects}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(c => !c)}
-        onSettingsClick={() => setShowSettings(true)}
-      />
+      {!isLandingPage && (
+        <AppSidebar
+          projects={projects}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(c => !c)}
+          onSettingsClick={() => setShowSettings(true)}
+        />
+      )}
 
       <div className="at-main" style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="at-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>

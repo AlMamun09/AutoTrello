@@ -1,4 +1,4 @@
-import { MenuIcon, ChevronDown, UploadIcon, DownloadIcon, GridIcon, ZapIcon } from '@/lib/icons';
+import { MenuIcon, UploadIcon, DownloadIcon, GridIcon, ZapIcon, TrashIcon } from '@/lib/icons';
 import { Link } from 'react-router-dom';
 
 export function AppNavbar({
@@ -8,6 +8,7 @@ export function AppNavbar({
   onExport,
   onImport,
   onSync,
+  onDelete,
   hideActions = false
 }: {
   title: string;
@@ -16,6 +17,7 @@ export function AppNavbar({
   onExport?: () => void;
   onImport?: () => void;
   onSync?: () => void;
+  onDelete?: () => void;
   hideActions?: boolean;
 }) {
   return (
@@ -34,7 +36,7 @@ export function AppNavbar({
         <div className="at-template-pill">
           <span style={{ opacity: 0.5 }}>Template:</span>
           <span style={{ color: '#fff' }}>{templateName}</span>
-          <ChevronDown size={10} />
+          {/* <ChevronDown size={10} /> */}
         </div>
       )}
 
@@ -50,6 +52,12 @@ export function AppNavbar({
             <button className="at-btn at-btn-ghost" onClick={onExport} title="Export project as JSON">
               <DownloadIcon size={16} />
               <span className="btn-label">Export</span>
+            </button>
+          )}
+          {onDelete && (
+            <button className="at-btn at-btn-danger-ghost" onClick={onDelete} title="Delete project">
+              <TrashIcon size={16} />
+              <span className="btn-label">Delete</span>
             </button>
           )}
           {onSync && (

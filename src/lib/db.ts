@@ -7,6 +7,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   source_document_name?: string;
+  custom_columns?: string[];
 }
 
 export type Priority = 'Critical' | 'High' | 'Medium' | 'Low';
@@ -20,6 +21,14 @@ export interface Task {
   column: string;
   subtasks: string[];
   labels: string[];
+  assignee?: string;
+  due_date?: string;
+  start_date?: string;
+  estimate?: string;
+  cover_color?: string;
+  attachments?: string[];
+  comments?: string[];
+  sort_order?: number;
   created_at: string;
   updated_at: string;
 }

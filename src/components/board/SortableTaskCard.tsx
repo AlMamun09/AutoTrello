@@ -3,10 +3,10 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '@/lib/db';
 
 const PRIORITY_BORDER: Record<string, string> = {
-  Critical: '#EF4444',
-  High:     '#F97316',
-  Medium:   '#EAB308',
-  Low:      '#22C55E',
+  Critical: '#FB7185',
+  High:     '#FDBA74',
+  Medium:   '#FDE68A',
+  Low:      '#B8F7D4',
 };
 
 export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
@@ -18,6 +18,7 @@ export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () =>
     transition,
     opacity: isDragging ? 0.4 : 1,
     borderLeftColor: PRIORITY_BORDER[task.priority] ?? PRIORITY_BORDER.Medium,
+    borderTopColor: task.cover_color || undefined,
   };
 
   // Derive a short module/tag from labels
@@ -37,6 +38,7 @@ export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () =>
       className="at-card"
       data-priority={task.priority}
     >
+      {task.cover_color && <div className="at-card-mini-cover" style={{ background: task.cover_color }} />}
       <div className="at-card-title">{task.title}</div>
       {task.description && (
         <div className="at-card-desc">{task.description}</div>
@@ -44,6 +46,8 @@ export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () =>
       <div className="at-card-footer">
         <span className={`at-badge at-badge-${task.priority}`}>{task.priority}</span>
         {tag && <span className="at-tag">{tag}</span>}
+        {task.due_date && <span className="at-tag">Due {task.due_date}</span>}
+        {task.estimate && <span className="at-tag">{task.estimate}</span>}
         {task.subtasks?.length > 0 && (
           <span className="at-tag" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 3 }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -52,8 +56,9 @@ export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () =>
             {task.subtasks.length}
           </span>
         )}
+        {task.attachments?.length ? <span className="at-tag">{task.attachments.length} links</span> : null}
         <div className="at-avatar-sm" style={{ marginLeft: tag ? undefined : 'auto' }} title={task.title}>
-          {initials.toUpperCase()}
+          {(task.assignee ? task.assignee.slice(0, 2) : initials).toUpperCase()}
         </div>
       </div>
     </div>

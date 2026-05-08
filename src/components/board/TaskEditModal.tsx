@@ -1,29 +1,37 @@
-import { useState, type ChangeEvent, type CSSProperties } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import type { Task } from '@/lib/db';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'] as const;
+const COVER_COLORS = ['#7DD3FC', '#B8F7D4', '#FDBA74', '#FDE68A', '#C4B5FD', '#FB7185'];
 
-const BADGE_STYLE: Record<string, CSSProperties> = {
-  Critical: { background: 'rgba(239,68,68,0.15)', color: '#EF4444' },
-  High:     { background: 'rgba(249,115,22,0.15)', color: '#F97316' },
-  Medium:   { background: 'rgba(234,179,8,0.15)',  color: '#EAB308' },
-  Low:      { background: 'rgba(34,197,94,0.15)',  color: '#22C55E' },
-};
+function normalizeUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
 export function TaskEditModal({
-  task, columns, onClose, onSave, onDelete,
+  task, columns, onClose, onSave, onDelete, onPromote,
 }: {
   task: Task;
   columns: string[];
   onClose: () => void;
   onSave: (t: Task) => void;
   onDelete?: () => void;
+  onPromote?: (title: string) => void;
 }) {
-  const [edited, setEdited] = useState<Task>({ ...task });
+  const [edited, setEdited] = useState<Task>({
+    ...task,
+    subtasks: task.subtasks ?? [],
+    labels: task.labels ?? [],
+    attachments: task.attachments ?? [],
+    comments: task.comments ?? [],
+  });
   const [newSubtask, setNewSubtask] = useState('');
-  const [checkedSubs, setCheckedSubs] = useState<Record<number, boolean>>(
-    Object.fromEntries(task.subtasks?.map((_, i) => [i, i < Math.floor((task.subtasks?.length ?? 0) / 2)]) ?? [])
-  );
+  const [newLabel, setNewLabel] = useState('');
+  const [newAttachment, setNewAttachment] = useState('');
+  const [newComment, setNewComment] = useState('');
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -31,31 +39,59 @@ export function TaskEditModal({
   };
 
   const addSubtask = () => {
-    if (!newSubtask.trim()) return;
-    setEdited(p => ({ ...p, subtasks: [...(p.subtasks ?? []), newSubtask.trim()] }));
+    const value = newSubtask.trim();
+    if (!value) return;
+    setEdited(p => ({ ...p, subtasks: [...(p.subtasks ?? []), value] }));
     setNewSubtask('');
   };
 
-  const removeLabel = (lbl: string) => setEdited(p => ({ ...p, labels: p.labels?.filter(l => l !== lbl) }));
+  const removeSubtask = (index: number) => {
+    setEdited(p => ({ ...p, subtasks: (p.subtasks ?? []).filter((_, i) => i !== index) }));
+  };
+
+  const addLabel = () => {
+    const value = newLabel.trim();
+    if (!value || edited.labels?.includes(value)) return;
+    setEdited(p => ({ ...p, labels: [...(p.labels ?? []), value] }));
+    setNewLabel('');
+  };
+
+  const removeLabel = (label: string) => {
+    setEdited(p => ({ ...p, labels: (p.labels ?? []).filter(l => l !== label) }));
+  };
+
+  const addAttachment = () => {
+    const value = normalizeUrl(newAttachment);
+    if (!value) return;
+    setEdited(p => ({ ...p, attachments: [...(p.attachments ?? []), value] }));
+    setNewAttachment('');
+  };
+
+  const addComment = () => {
+    const value = newComment.trim();
+    if (!value) return;
+    setEdited(p => ({ ...p, comments: [...(p.comments ?? []), value] }));
+    setNewComment('');
+  };
 
   const createdDate = new Date(task.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const updatedDate = new Date(task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="at-modal-backdrop" onClick={onClose}>
-      <div className="at-modal" style={{ width: 720, maxWidth: '95vw' }} onClick={e => e.stopPropagation()}>
-        {/* Header */}
+      <div className="at-modal at-task-modal" onClick={e => e.stopPropagation()}>
+        <div className="at-card-cover" style={{ background: edited.cover_color || 'linear-gradient(135deg, rgba(184,247,212,0.5), rgba(125,211,252,0.55))' }} />
+
         <div className="at-modal-header">
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            TASK-{task.id.slice(0, 5).toUpperCase()}
+          <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--at-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            CARD-{task.id.slice(0, 5).toUpperCase()}
           </span>
-          <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+          <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}>x</button>
         </div>
 
-        {/* Split body */}
         <div className="at-task-split">
-          {/* Main */}
           <div className="at-task-main">
+            <span className="at-section-label">Task</span>
             <input
               className="at-task-title-input"
               name="title"
@@ -72,89 +108,182 @@ export function TaskEditModal({
                 value={edited.description}
                 onChange={handleChange}
                 rows={4}
-                placeholder="Add a description…"
+                placeholder="Add details, acceptance criteria, or context..."
               />
             </div>
 
-            <div>
-              <span className="at-section-label">Sub-tasks</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+            <div className="at-detail-section">
+              <span className="at-section-label">Checklist / Subtasks</span>
+              <div className="at-checklist-list">
                 {(edited.subtasks ?? []).map((sub, i) => (
-                  <div key={i} className={`at-checklist-item${checkedSubs[i] ? ' done' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={!!checkedSubs[i]}
-                      onChange={e => setCheckedSubs(c => ({ ...c, [i]: e.target.checked }))}
-                    />
-                    <span>{sub}</span>
+                  <div key={`${sub}-${i}`} className="at-checklist-item">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <input type="checkbox" style={{ cursor: 'pointer' }} />
+                      <span style={{ fontSize: 13 }}>{sub}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {onPromote && (
+                        <button 
+                          className="at-btn at-btn-ghost" 
+                          style={{ fontSize: 10, padding: '2px 6px', height: 22, color: 'var(--at-primary)' }}
+                          onClick={() => {
+                            onPromote(sub);
+                            removeSubtask(i);
+                          }}
+                        >
+                          Promote
+                        </button>
+                      )}
+                      <button 
+                        className="at-btn at-btn-ghost" 
+                        style={{ fontSize: 10, padding: '2px 6px', height: 22, color: 'var(--at-critical)' }}
+                        onClick={() => removeSubtask(i)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div className="at-inline-add">
                 <input
                   className="at-input"
                   value={newSubtask}
                   onChange={e => setNewSubtask(e.target.value)}
-                  placeholder="+ Add sub-task"
+                  placeholder="Add subtask after defining the main task"
                   onKeyDown={e => e.key === 'Enter' && addSubtask()}
-                  style={{ flex: 1 }}
                 />
-                <button className="at-btn at-btn-primary" onClick={addSubtask} style={{ padding: '0 14px' }}>Add</button>
+                <button className="at-btn at-btn-primary" onClick={addSubtask}>Add</button>
               </div>
+            </div>
+
+            <div className="at-detail-section">
+              <span className="at-section-label">Attachments</span>
+              <div className="at-attachment-list">
+                {(edited.attachments ?? []).map(url => (
+                  <a key={url} href={url} target="_blank" rel="noopener noreferrer">{url}</a>
+                ))}
+              </div>
+              <div className="at-inline-add">
+                <input
+                  className="at-input"
+                  value={newAttachment}
+                  onChange={e => setNewAttachment(e.target.value)}
+                  placeholder="Add URL attachment"
+                  onKeyDown={e => e.key === 'Enter' && addAttachment()}
+                />
+                <button className="at-btn at-btn-secondary" onClick={addAttachment}>Attach</button>
+              </div>
+            </div>
+
+            <div className="at-detail-section">
+              <span className="at-section-label">Activity / Comments</span>
+              <div className="at-comment-list">
+                {(edited.comments ?? []).map((comment, i) => (
+                  <div key={`${comment}-${i}`} className="at-comment">{comment}</div>
+                ))}
+              </div>
+              <textarea
+                className="at-textarea"
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                rows={2}
+                placeholder="Write a comment..."
+              />
+              <button className="at-btn at-btn-secondary" onClick={addComment} style={{ marginTop: 8 }}>Add Comment</button>
             </div>
           </div>
 
-          {/* Meta sidebar */}
           <div className="at-task-meta">
             <div className="at-meta-item">
+              <div className="at-meta-label">Status / List</div>
+              <CustomSelect 
+                value={edited.column} 
+                options={columns} 
+                onChange={(val) => setEdited(p => ({ ...p, column: val }))} 
+              />
+            </div>
+
+            <div className="at-meta-item">
               <div className="at-meta-label">Priority</div>
-              <select name="priority" value={edited.priority} onChange={handleChange} className="at-select" style={{ marginTop: 4 }}>
-                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <div style={{ marginTop: 6 }}>
-                <span style={{ ...BADGE_STYLE[edited.priority], fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 99 }}>
-                  {edited.priority}
-                </span>
+              <CustomSelect 
+                value={edited.priority} 
+                options={[...PRIORITIES]} 
+                onChange={(val) => setEdited(p => ({ ...p, priority: val as any }))} 
+              />
+            </div>
+
+            <div className="at-meta-item">
+              <div className="at-meta-label">Assignee</div>
+              <input className="at-input" name="assignee" value={edited.assignee ?? ''} onChange={handleChange} placeholder="Owner name" />
+            </div>
+
+            <div className="at-meta-grid">
+              <div className="at-meta-item">
+                <div className="at-meta-label">Start</div>
+                <input className="at-input" name="start_date" type="date" value={edited.start_date ?? ''} onChange={handleChange} />
+              </div>
+              <div className="at-meta-item">
+                <div className="at-meta-label">Due</div>
+                <input className="at-input" name="due_date" type="date" value={edited.due_date ?? ''} onChange={handleChange} />
               </div>
             </div>
 
             <div className="at-meta-item">
-              <div className="at-meta-label">Column / Status</div>
-              <select name="column" value={edited.column} onChange={handleChange} className="at-select" style={{ marginTop: 4 }}>
-                {columns.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="at-meta-label">Estimate</div>
+              <input className="at-input" name="estimate" value={edited.estimate ?? ''} onChange={handleChange} placeholder="2h, 3d, 1 sprint" />
+            </div>
+
+            <div className="at-meta-item">
+              <div className="at-meta-label">Cover</div>
+              <div className="at-cover-picker">
+                {COVER_COLORS.map(color => (
+                  <button
+                    key={color}
+                    style={{ background: color, outline: edited.cover_color === color ? '2px solid white' : undefined }}
+                    onClick={() => setEdited(p => ({ ...p, cover_color: color }))}
+                    title={color}
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="at-meta-item">
               <div className="at-meta-label">Labels</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>
+              <div className="at-label-list">
                 {(edited.labels ?? []).map(lbl => (
-                  <span key={lbl} className="at-tag" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                    onClick={() => removeLabel(lbl)}>
-                    {lbl} <span style={{ fontSize: 10 }}>×</span>
-                  </span>
+                  <button key={lbl} className="at-tag" onClick={() => removeLabel(lbl)} title="Remove label">
+                    {lbl} x
+                  </button>
                 ))}
-                <span className="at-tag" style={{ cursor: 'pointer', color: '#2563EB', border: '1px dashed #2563EB' }}>+ Label</span>
+              </div>
+              <div className="at-inline-add compact">
+                <input
+                  className="at-input"
+                  value={newLabel}
+                  onChange={e => setNewLabel(e.target.value)}
+                  placeholder="New label"
+                  onKeyDown={e => e.key === 'Enter' && addLabel()}
+                />
+                <button className="at-btn at-btn-secondary" onClick={addLabel}>Add</button>
               </div>
             </div>
 
             <div className="at-meta-item">
               <div className="at-meta-label">Created</div>
-              <div className="at-meta-value" style={{ fontSize: 12, marginTop: 3 }}>{createdDate}</div>
+              <div className="at-meta-value">{createdDate}</div>
             </div>
-
             <div className="at-meta-item">
-              <div className="at-meta-label">Last Updated</div>
-              <div className="at-meta-value" style={{ fontSize: 12, marginTop: 3 }}>{updatedDate}</div>
+              <div className="at-meta-label">Updated</div>
+              <div className="at-meta-value">{updatedDate}</div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="at-modal-footer">
           {onDelete && (
             <button className="at-btn at-btn-danger-ghost" onClick={onDelete} style={{ marginRight: 'auto' }}>
-              Delete Task
+              Delete Card
             </button>
           )}
           <button className="at-btn at-btn-ghost" onClick={onClose}>Cancel</button>
@@ -162,7 +291,7 @@ export function TaskEditModal({
             className="at-btn at-btn-primary"
             onClick={() => onSave({ ...edited, updated_at: new Date().toISOString() })}
           >
-            Save Changes
+            Save Card
           </button>
         </div>
       </div>

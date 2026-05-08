@@ -1,135 +1,79 @@
-# AutoTrello
+# AutoTrello 🚀
 
-AutoTrello is a local-first React application that turns project documents into structured Kanban backlogs and can sync those tasks into Trello. Upload an SRS, business brief, course plan, or similar document, choose a workflow template, generate tasks with an AI provider, then manage the result in a Trello-style board.
+AutoTrello is a local-first, privacy-focused React application that transforms project documents (SRS, business briefs, course plans) into structured Kanban backlogs. Using advanced AI, it drafts your board in seconds and provides seamless synchronization with Trello for production-ready project management.
 
-## Features
+![Premium UI](https://img.shields.io/badge/UI-Premium-blueviolet)
+![Local First](https://img.shields.io/badge/Data-Local--First-green)
+![AI Powered](https://img.shields.io/badge/AI-Backlog--Gen-orange)
 
-- Generate a project backlog from PDF, DOCX, TXT, Markdown, or CSV files.
-- Manage tasks in a drag-and-drop Kanban board.
-- Use built-in workflow templates for SDLC, HR, CRM, marketing, operations, design, small business, and education projects.
-- Edit task title, description, priority, status column, labels, and subtasks.
-- Export and import AutoTrello projects as JSON.
-- Chat with an AI board assistant about the current project.
-- Sync generated cards, checklists, and labels to Trello.
-- Store settings and project data locally in the browser using IndexedDB/localStorage.
+## ✨ Features
 
-## Tech Stack
+- **AI Backlog Generation**: Upload PDF, DOCX, TXT, Markdown, or CSV files and watch the AI generate a complete set of tasks, epics, and subtasks.
+- **Local-First Storage**: All your project data and API keys stay strictly in your browser (IndexedDB), ensuring maximum privacy.
+- **Interactive Kanban Board**: Fully functional drag-and-drop interface with column-specific colors and "Quick Add" capabilities.
+- **Premium Task Management**:
+  - **Promote to Task**: Easily convert subtasks/checklist items into full-fledged tasks.
+  - **Custom UI**: Beautiful Glassmorphism dropdowns for status and priority.
+  - **Rich Metadata**: Track assignees, estimates, due dates, and attachments.
+- **Workflow Templates**: Built-in specialized boards for SDLC, HR, CRM, Marketing, Operations, Design, Small Business, and Education.
+- **AI Board Assistant**: Chat with your board to refine tasks, brainstorm subtasks, or reorganize your project.
+- **Trello Synchronization**: Create Trello boards, lists, and cards (including checklists and labels) with one click.
+- **Export/Import**: Save your work as JSON for backups or sharing.
 
-- React 19
-- TypeScript
-- Vite
-- Tailwind CSS 4
-- dnd-kit
-- IndexedDB via `idb`
-- PDF parsing via `pdfjs-dist`
-- DOCX parsing via `mammoth`
-- OpenAI-compatible chat-completions API providers
+## 🛠 Tech Stack
 
-## Requirements
+- **Framework**: React 19 + Vite
+- **Styling**: Tailwind CSS v4 (Modern CSS-first approach)
+- **State & DB**: IndexedDB (via `idb`) + Zustand
+- **Interactions**: `@dnd-kit` for robust drag-and-drop
+- **AI**: OpenAI-compatible API integration (BYOK - Bring Your Own Key)
+- **Parsing**: `pdfjs-dist` & `mammoth` for client-side document processing
 
-- Node.js 20 or newer
-- npm
-- An AI provider API key for backlog generation
-- Optional Trello API key and token for board sync
+## 🚀 Getting Started
 
-## Getting Started
+1. **Clone and Install**:
+   ```bash
+   git clone https://github.com/AlMamun09/AutoTrello.git
+   cd AutoTrello
+   npm install
+   ```
+2. **Run Locally**:
+   ```bash
+   npm run dev
+   ```
+3. **Configure Settings**:
+   - Open the sidebar and click the **Settings** gear.
+   - Enter your **AI Provider** details (Base URL, API Key, Model).
+   - (Optional) Enter your **Trello API Key and Token** for sync features.
 
-Install dependencies:
+## 🤝 Contributing
 
-```bash
-npm install
-```
+We welcome contributions from the community! Whether you are fixing a bug, adding a feature, or improving documentation, your help is appreciated.
 
-Start the development server:
+1. **Fork the repository**.
+2. **Create a feature branch** (`git checkout -b feature/AmazingFeature`).
+3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`).
+4. **Push to the branch** (`git push origin feature/AmazingFeature`).
+5. **Open a Pull Request**.
 
-```bash
-npm run dev
-```
+### Areas for Contribution:
+- **UI/UX**: New themes, dark mode refinements, or micro-animations.
+- **Templates**: New industry-specific workflow templates in `src/lib/templates.ts`.
+- **Integrations**: Support for GitHub Issues, Jira, or Notion.
+- **AI Capabilities**: Improving agent tools and backlog generation prompts.
 
-Build for production:
+## 🔮 Future Scope
 
-```bash
-npm run build
-```
+- [ ] **Multi-Board Views**: Support for project-wide dashboards and cross-project task tracking.
+- [ ] **P2P Collaboration**: Real-time board sharing using WebRTC/CRDTs without a central server.
+- [ ] **Extended Integrations**: Bi-directional sync with GitHub, GitLab, and Jira.
+- [ ] **AI-Powered Sprints**: Automated task estimation and sprint planning suggestions.
+- [ ] **Chrome Extension**: Quick-capture tasks from any website directly into your AutoTrello backlog.
+- [ ] **Mobile Support**: PWA optimization and native mobile wrappers for on-the-go management.
 
-Run linting:
+## 📜 License
 
-```bash
-npm run lint
-```
+This project is currently unlicensed. We are in the process of selecting an open-source license.
 
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-On Windows PowerShell, if `npm` is blocked by execution policy, use `npm.cmd` instead:
-
-```powershell
-npm.cmd run dev
-npm.cmd run build
-npm.cmd run lint
-```
-
-## Configuration
-
-Open the app settings panel and configure the AI provider:
-
-- Base URL: OpenAI-compatible API endpoint, such as `https://api.openai.com/v1`, OpenRouter, Groq, or a local LM Studio endpoint.
-- API Key: provider key used by the browser client.
-- Model Name: the model used for backlog generation and chat.
-
-For Trello sync, add:
-
-- Trello API Key from `https://trello.com/app-key`
-- Trello Token from the same Trello developer page
-
-Because this is a browser-only app, API keys are stored in local browser storage. Use keys with appropriate limits and avoid sharing browser profiles that contain credentials.
-
-## Project Workflow
-
-1. Open the app and create a new project.
-2. Upload a document such as an SRS, business spec, notes file, PDF, or DOCX.
-3. Select a project template.
-4. Generate the backlog with your configured AI provider.
-5. Review, edit, and move tasks on the Kanban board.
-6. Export the project as JSON or sync it to Trello.
-
-## Repository Structure
-
-```text
-src/
-  components/
-    board/       Kanban board, task modal, AI chat panel
-    projects/    project list and new project flow
-    settings/    AI and Trello settings UI
-    ui/          reusable UI primitives
-  lib/
-    ai.ts        AI provider requests
-    db.ts        IndexedDB project/task persistence
-    export.ts    JSON import/export helpers
-    parser.ts    document parsing
-    templates.ts workflow templates
-    trello.ts    Trello sync integration
-public/          static assets
-```
-
-## Data and Privacy
-
-AutoTrello does not ship with a backend. Project data is stored in the user's browser, and uploaded documents are parsed client-side. Generated prompts and parsed document content are sent to the AI provider configured in settings. Trello sync sends project/task data to Trello only when explicitly triggered.
-
-## Git Hygiene
-
-The repository intentionally excludes:
-
-- `node_modules/`
-- production build output in `dist/`
-- local environment files
-- generated board export JSON files
-- local mockup/prototype artifacts
-- logs, coverage, cache files, and editor-specific files
-
-## License
-
-No license has been selected yet. Add a license before distributing or accepting external contributions.
+---
+*Built with ❤️ for privacy-conscious project managers and developers.*

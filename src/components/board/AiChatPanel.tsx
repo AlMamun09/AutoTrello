@@ -1,27 +1,32 @@
 import { useState, useRef, useEffect } from 'react';
-import { chatWithBoard } from '@/lib/ai';
+import { chatWithBoard, type BoardAgentAction } from '@/lib/ai';
 import type { Project, Task } from '@/lib/db';
+import { SparklesIcon } from '@/lib/icons';
 
 type Message = {
   role: 'user' | 'assistant';
   content: string;
 };
 
-export function AiChatPanel({ 
-  project, 
-  tasks, 
-  collapsed, 
-  onCollapse, 
-  onExpand 
+export function AiChatPanel({
+  project,
+  tasks,
+  collapsed,
+  onCollapse,
+  onExpand,
+  columns,
+  onAgentActions,
 }: {
   project: Project;
   tasks: Task[];
   collapsed: boolean;
   onCollapse: () => void;
   onExpand: () => void;
+  columns: string[];
+  onAgentActions: (actions: BoardAgentAction[]) => Promise<number>;
 }) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: `Hi! I'm your AutoTrello AI Agent. I've analyzed "${project.name}" and I'm ready to help you manage your backlog. What's on your mind?` }
+    { role: 'assistant', content: `I reviewed "${project.name}". Ask me to summarize scope, spot gaps, or suggest the next backlog items.` },
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -34,19 +39,22 @@ export function AiChatPanel({
   }, [messages, isTyping]);
 
   const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
+    const prompt = input.trim();
+    if (!prompt || isTyping) return;
 
-    const userMsg: Message = { role: 'user', content: input };
+    const userMsg: Message = { role: 'user', content: prompt };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
 
     try {
-      const response = await chatWithBoard([...messages, userMsg], project, tasks);
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      const response = await chatWithBoard([...messages, userMsg], project, tasks, columns);
+      const applied = response.actions.length ? await onAgentActions(response.actions) : 0;
+      const actionNote = applied > 0 ? `\n\nApplied ${applied} board change${applied === 1 ? '' : 's'}.` : '';
+      setMessages(prev => [...prev, { role: 'assistant', content: `${response.reply}${actionNote}` }]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, I encountered an error: ${message}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `I could not complete that request: ${message}` }]);
     } finally {
       setIsTyping(false);
     }
@@ -54,102 +62,73 @@ export function AiChatPanel({
 
   if (collapsed) {
     return (
-      <div className="at-side-panel collapsed">
-        <button
-          className="at-panel-expand-tab"
-          onClick={onExpand}
-          style={{ 
-            display: 'flex', position: 'absolute', left: -28, top: '50%', 
-            transform: 'translateY(-50%)', background: '#1E293B', 
-            border: '1px solid #334155', borderRight: 'none', 
-            padding: '12px 5px', borderRadius: '6px 0 0 6px', cursor: 'pointer' 
-          }}
-        >
-          <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.1em' }}>AI AGENT</span>
+      <aside className="at-chat-rail">
+        <button className="at-chat-rail-button" onClick={onExpand} title="Open AI assistant">
+          <SparklesIcon size={17} color="#07111F" />
+          <span>AI</span>
         </button>
-      </div>
+      </aside>
     );
   }
 
   return (
-    <div className="at-side-panel" style={{ width: 340, display: 'flex', flexDirection: 'column' }}>
-      <div className="at-panel-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px #22C55E' }} />
-          <span style={{ fontWeight: 600 }}>AI Agent</span>
+    <aside className="at-side-panel at-chat-panel">
+      <div className="at-chat-header">
+        <div className="at-chat-title-wrap">
+          <div className="at-chat-orb">
+            <SparklesIcon size={16} color="#07111F" />
+          </div>
+          <div>
+            <div className="at-chat-title">AI Board Assistant</div>
+            <div className="at-chat-subtitle">{tasks.length} tasks in context</div>
+          </div>
         </div>
-        <button className="at-btn at-btn-ghost" onClick={onCollapse} style={{ padding: '4px 6px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>
+
+        <button className="at-chat-collapse" onClick={onCollapse} title="Collapse assistant">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="14 18 8 12 14 6" />
           </svg>
         </button>
       </div>
 
-      <div 
-        ref={scrollRef}
-        style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}
-      >
+      <div className="at-chat-suggestions">
+        {['Summarize board', 'Create 3 missing QA cards', 'Move high priority work to To Do'].map(suggestion => (
+          <button key={suggestion} onClick={() => setInput(suggestion)}>
+            {suggestion}
+          </button>
+        ))}
+      </div>
+
+      <div ref={scrollRef} className="at-chat-messages">
         {messages.map((msg, i) => (
-          <div 
-            key={i} 
-            style={{ 
-              alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '85%',
-              background: msg.role === 'user' ? '#2563EB' : '#1E293B',
-              color: msg.role === 'user' ? '#fff' : '#CBD5E1',
-              padding: '10px 12px',
-              borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-              fontSize: 13,
-              lineHeight: 1.5,
-              border: msg.role === 'assistant' ? '1px solid #334155' : 'none'
-            }}
-          >
+          <div key={i} className={`at-chat-message ${msg.role}`}>
             {msg.content}
           </div>
         ))}
+
         {isTyping && (
-          <div style={{ alignSelf: 'flex-start', background: '#1E293B', padding: '10px 12px', borderRadius: '12px 12px 12px 2px', border: '1px solid #334155' }}>
+          <div className="at-chat-message assistant typing">
             <div className="at-typing-indicator">
-              <span></span><span></span><span></span>
+              <span />
+              <span />
+              <span />
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ padding: '14px', borderTop: '1px solid #1E293B' }}>
-        <div style={{ position: 'relative' }}>
-          <textarea
-            className="at-input"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="Ask about your project..."
-            rows={2}
-            style={{ 
-              width: '100%', resize: 'none', paddingRight: '44px', paddingLeft: '12px',
-              paddingTop: '10px', background: '#0F172A', fontSize: 13, minHeight: 60
-            }}
-          />
-          <button 
-            onClick={handleSend}
-            disabled={!input.trim() || isTyping}
-            style={{ 
-              position: 'absolute', right: 8, bottom: 8, 
-              background: '#2563EB', color: '#fff', border: 'none', 
-              borderRadius: '6px', width: 32, height: 32, 
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', opacity: (!input.trim() || isTyping) ? 0.5 : 1
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
-        </div>
-        <div style={{ fontSize: 10, color: '#475569', marginTop: 8, textAlign: 'center' }}>
-          AI can help brainstorm tasks or explain requirements
-        </div>
+      <div className="at-chat-composer">
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
+          placeholder="Ask about backlog gaps, priorities, or next steps..."
+          rows={3}
+        />
+        <button onClick={() => void handleSend()} disabled={!input.trim() || isTyping}>
+          Send
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
