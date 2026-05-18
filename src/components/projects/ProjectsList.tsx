@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ChangeEvent, type MouseEvent } from '
 import { Link, useOutletContext } from 'react-router-dom';
 import { getProjects, deleteProject, type Project } from '@/lib/db';
 import { importProject } from '@/lib/export';
+import { getSettings } from '@/lib/settings';
 import { AppNavbar } from '@/components/AppNavbar';
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog';
 
@@ -34,12 +35,24 @@ const TEMPLATE_MARKS: Record<string, string> = {
 };
 
 export function ProjectsList() {
-  const { onSidebarToggle } = useOutletContext<{ onSidebarToggle: () => void }>();
+  const { onSidebarToggle, onOpenSettings } = useOutletContext<{ onSidebarToggle: () => void; onOpenSettings: (highlightMissing?: boolean) => void }>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { getProjects().then(setProjects); }, []);
+
+  // First-time onboarding: auto-open settings if config is incomplete
+  useEffect(() => {
+    const onboardingSeen = localStorage.getItem('autotrello_onboarding_seen');
+    if (onboardingSeen) return;
+
+    const s = getSettings();
+    if (!s.aiApiKey || !s.trelloApiKey) {
+      localStorage.setItem('autotrello_onboarding_seen', '1');
+      onOpenSettings(true);
+    }
+  }, [onOpenSettings]);
 
   const handleImport = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -70,6 +83,7 @@ export function ProjectsList() {
       <AppNavbar
         title="Projects"
         onSidebarToggle={onSidebarToggle}
+        onOpenSettings={onOpenSettings}
         onImport={() => fileInputRef.current?.click()}
       />
 

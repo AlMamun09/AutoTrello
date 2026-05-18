@@ -347,6 +347,10 @@
   font-weight: 850;
   color: var(--at-text);
   letter-spacing: -0.035em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
 }
 
 .at-template-pill {
@@ -364,6 +368,64 @@
   transition: var(--at-transition);
 }
 .at-template-pill:hover { border-color: var(--at-primary); color: var(--at-text); }
+
+/* Navbar action groups */
+.at-navbar-actions-desktop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.at-navbar-actions-mobile {
+  display: none;
+  position: relative;
+}
+
+/* Mobile dropdown menu */
+.at-mobile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: var(--at-surface-raised);
+  border: 1px solid var(--at-border);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  animation: at-dropdown-in 0.15s ease-out;
+}
+
+@keyframes at-dropdown-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.at-mobile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--at-text);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--at-transition);
+}
+
+.at-mobile-dropdown-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.at-mobile-dropdown-item-danger {
+  color: var(--at-critical);
+}
+
+.at-mobile-dropdown-item-danger:hover {
+  background: rgba(251,113,133,0.1);
+}
 
 /* ── Buttons ── */
 .at-btn {
@@ -918,6 +980,10 @@
     radial-gradient(circle at 12% 0%, rgba(251,113,133,0.22), transparent 34%),
     linear-gradient(145deg, rgba(184,247,212,0.07), transparent 42%),
     #0D1B2E;
+}
+
+.at-settings-modal {
+  width: min(560px, 100%);
 }
 
 .at-confirm-hero {
@@ -1665,5 +1731,338 @@
 
   .at-template-option-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tablet: 769px - 1024px ── */
+@media (max-width: 1024px) {
+  .at-kanban-col {
+    width: 260px;
+  }
+
+  .at-side-panel {
+    width: 300px;
+  }
+
+  .at-chat-panel {
+    width: 320px;
+  }
+}
+
+/* ── Mobile: <= 768px ── */
+@media (max-width: 768px) {
+  .at-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: none;
+  }
+
+  .at-sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 22px 0 80px rgba(0, 0, 0, 0.5);
+    width: 236px;
+  }
+
+  /* On mobile, always show full sidebar even if collapsed class is set */
+  .at-sidebar.mobile-open.collapsed {
+    width: 236px;
+  }
+
+  .at-sidebar.mobile-open .at-sidebar-collapse-toggle {
+    display: none;
+  }
+
+  /* Override collapsed-state hidden elements when mobile sidebar is open */
+  .at-sidebar.mobile-open.collapsed .logo-text { display: inline; }
+  .at-sidebar.mobile-open.collapsed .nav-label { display: inline; }
+  .at-sidebar.mobile-open.collapsed .at-sidebar-section { opacity: 1; }
+  .at-sidebar.mobile-open.collapsed .at-sidebar-logo { justify-content: flex-start; padding: 0 16px; }
+  .at-sidebar.mobile-open.collapsed .at-nav-item { justify-content: flex-start; padding: 9px 14px; }
+  .at-sidebar.mobile-open.collapsed .at-sidebar-nav { padding: 22px 16px; }
+  .at-sidebar.mobile-open.collapsed .at-sidebar-footer { flex-direction: row; justify-content: flex-start; }
+  .at-sidebar.mobile-open.collapsed .at-settings-button { justify-content: flex-start; width: 100%; padding: 0 12px; }
+  .at-sidebar.mobile-open.collapsed .at-settings-label { display: inline; }
+  .at-sidebar.mobile-open.collapsed .at-user-info { display: flex; }
+
+  .at-sidebar-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 55;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  .at-sidebar-mobile-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .at-main {
+    width: 100%;
+  }
+
+  .at-navbar {
+    padding: 0 16px;
+    gap: 10px;
+    height: 64px;
+  }
+
+  .at-navbar-title {
+    max-width: 160px;
+    font-size: 14px;
+  }
+
+  .at-navbar-settings {
+    display: flex;
+  }
+
+  .at-sidebar-collapse-toggle {
+    display: none;
+  }
+
+  /* Hide desktop action buttons, show mobile menu */
+  .at-navbar-actions-desktop {
+    display: none;
+  }
+
+  .at-navbar-actions-mobile {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Hide template pill on mobile */
+  .at-template-pill { display: none; }
+
+  /* Tab bar: enable horizontal scroll */
+  .at-tabbar {
+    padding: 0 16px;
+    overflow-x: auto;
+    gap: 4px;
+  }
+
+  .at-tab {
+    white-space: nowrap;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  /* Kanban board: reduce padding */
+  .at-kanban-board {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .at-kanban-col {
+    width: 280px;
+  }
+
+  /* Side panels: full-screen overlay on mobile */
+  .at-side-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 70;
+    border-left: none;
+    border-radius: 0;
+  }
+
+  .at-chat-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .at-chat-rail {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 65;
+    width: 48px;
+    border-radius: 12px 0 0 12px;
+    border-left: none;
+    border: 1px solid rgba(184,247,212,0.13);
+    border-right: none;
+  }
+
+  .at-chat-rail-button {
+    width: 32px;
+    min-height: 80px;
+  }
+
+  /* Task edit modal: full screen on mobile */
+  .at-task-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .at-task-split {
+    flex-direction: column;
+  }
+
+  .at-task-meta {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--at-border);
+    max-height: 40vh;
+  }
+
+  .at-task-main {
+    padding: 16px;
+  }
+
+  .at-task-meta {
+    padding: 16px;
+  }
+
+  /* Settings modal: full width on mobile */
+  .at-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  /* Page scroll: reduce padding */
+  .at-page-scroll {
+    padding: 20px 16px;
+  }
+
+  .at-generate-main,
+  .at-template-sidebar {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .at-template-option-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* Page title: smaller on mobile */
+  .at-page-title {
+    font-size: 24px;
+  }
+
+  .at-page-subtitle {
+    font-size: 14px;
+  }
+}
+
+/* ── Small mobile: <= 480px ── */
+@media (max-width: 480px) {
+  .at-navbar {
+    padding: 0 12px;
+    gap: 8px;
+    height: 56px;
+  }
+
+  .at-navbar-title {
+    font-size: 14px;
+  }
+
+  .at-tabbar {
+    padding: 0 12px;
+  }
+
+  .at-kanban-board {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .at-kanban-col {
+    width: 260px;
+  }
+
+  .at-col-header {
+    padding: 10px 12px;
+  }
+
+  .at-col-body {
+    padding: 10px;
+  }
+
+  .at-card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .at-card-title {
+    font-size: 13px;
+  }
+
+  .at-card-desc {
+    font-size: 11px;
+  }
+
+  .at-page-scroll {
+    padding: 16px 12px;
+  }
+
+  .at-generate-main,
+  .at-template-sidebar {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .at-page-title {
+    font-size: 22px;
+  }
+
+  .at-dropzone {
+    padding: 24px 16px;
+  }
+
+  .at-modal-backdrop {
+    padding: 0;
+  }
+
+  .at-confirm-hero {
+    padding: 20px 20px 16px;
+  }
+
+  .at-confirm-warning {
+    margin: 0 20px 18px;
+  }
+}
+
+/* ── Very small screens: <= 360px ── */
+@media (max-width: 360px) {
+  .at-navbar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .at-kanban-col {
+    width: 240px;
+  }
+
+  .at-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .at-page-title {
+    font-size: 20px;
+  }
+}
+
+/* Desktop: hide the navbar settings button (settings live in sidebar) */
+@media (min-width: 769px) {
+  .at-navbar-settings {
+    display: none;
   }
 }

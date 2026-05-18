@@ -31,7 +31,7 @@ function getModelSelection(modelName: string) {
   return MODELS.includes(modelName) ? modelName : '';
 }
 
-export function SettingsPanel({ onClose }: { onClose?: () => void }) {
+export function SettingsPanel({ onClose, highlightMissing }: { onClose?: () => void; highlightMissing?: boolean }) {
   const [settings, setSettings] = useState<AppSettings>(() => getSettings());
   const [showKey, setShowKey] = useState(false);
   const [activeProvider, setActiveProvider] = useState(() => getProviderForBaseUrl(getSettings().aiBaseUrl));
@@ -101,8 +101,23 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
 
   return (
     <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {highlightMissing && (!settings.aiApiKey || !settings.trelloApiKey) && (
+        <div style={{
+          background: 'rgba(96, 165, 250, 0.1)',
+          border: '1px solid rgba(96, 165, 250, 0.25)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          fontSize: 13,
+          color: '#93C5FD',
+          lineHeight: 1.5,
+        }}>
+          <strong style={{ color: '#BFDBFE' }}>Welcome!</strong> Configure your AI provider and Trello integration below to start generating project backlogs and syncing boards.
+          {!settings.aiApiKey && <div style={{ marginTop: 4, opacity: 0.8 }}>AI configuration is required.</div>}
+          {!settings.trelloApiKey && <div style={{ marginTop: 2, opacity: 0.8 }}>Trello configuration is required for board syncing.</div>}
+        </div>
+      )}
       {/* AI Provider */}
-      <div>
+      <div style={highlightMissing && !settings.aiApiKey ? { borderLeft: '3px solid var(--at-accent-blue)', paddingLeft: 12, marginLeft: -12 } : undefined}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 14 }}>AI Provider Configuration</div>
 
         <div className="at-form-group" style={{ marginBottom: 12 }}>
@@ -173,7 +188,7 @@ export function SettingsPanel({ onClose }: { onClose?: () => void }) {
       <div className="at-section-divider" />
 
       {/* Trello */}
-      <div>
+      <div style={highlightMissing && !settings.trelloApiKey ? { borderLeft: '3px solid var(--at-accent-blue)', paddingLeft: 12, marginLeft: -12 } : undefined}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#F1F5F9', marginBottom: 14 }}>Trello Integration</div>
 
         <div className="at-form-group" style={{ marginBottom: 12 }}>

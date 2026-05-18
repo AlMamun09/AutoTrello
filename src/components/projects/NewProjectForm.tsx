@@ -22,7 +22,7 @@ type InputMode = 'file' | 'text';
 
 export function NewProjectForm() {
   const navigate = useNavigate();
-  const { onSidebarToggle } = useOutletContext<{ onSidebarToggle: () => void }>();
+  const { onSidebarToggle, onOpenSettings } = useOutletContext<{ onSidebarToggle: () => void; onOpenSettings: (highlightMissing?: boolean) => void }>();
   const [file, setFile] = useState<File | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>('file');
   const [pastedText, setPastedText] = useState('');
@@ -103,6 +103,7 @@ export function NewProjectForm() {
       <AppNavbar
         title="New Project"
         onSidebarToggle={onSidebarToggle}
+        onOpenSettings={onOpenSettings}
         hideActions={true}
       />
 

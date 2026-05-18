@@ -192,14 +192,21 @@ function TrelloSyncPanel({ project, tasks, onClose }: {
 export function KanbanBoard() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { onSidebarToggle } = useOutletContext<{ onSidebarToggle: () => void }>();
+  const { onSidebarToggle, onOpenSettings } = useOutletContext<{ onSidebarToggle: () => void; onOpenSettings: (highlightMissing?: boolean) => void }>();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [srsCollapsed, setSrsCollapsed] = useState(false);
   const [showTrello, setShowTrello] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -342,6 +349,7 @@ export function KanbanBoard() {
         title={project.name}
         templateName={template.name || project.template}
         onSidebarToggle={onSidebarToggle}
+        onOpenSettings={onOpenSettings}
         onExport={handleExport}
         onImport={() => fileInputRef.current?.click()}
         onDelete={() => setShowDeleteConfirm(true)}
@@ -355,9 +363,9 @@ export function KanbanBoard() {
       </div>
 
       {/* Board + panel */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         {/* Kanban */}
-        <div className="at-kanban-board">
+        <div className="at-kanban-board" style={{ flex: isMobile && (showTrello || !srsCollapsed) ? '0 0 100%' : 1 }}>
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
             {columns.map(col => {
               const colTasks = tasks.filter(t => t.column === col).sort(compareTasksByOrder);
@@ -453,6 +461,22 @@ export function KanbanBoard() {
             onExpand={() => setSrsCollapsed(false)}
             columns={columns}
             onAgentActions={applyAgentActions}
+          />
+        )}
+
+        {/* Mobile overlay backdrop for side panels */}
+        {isMobile && (showTrello || !srsCollapsed) && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 65,
+            }}
+            onClick={() => {
+              if (showTrello) setShowTrello(false);
+              else setSrsCollapsed(true);
+            }}
           />
         )}
       </div>

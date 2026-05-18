@@ -14,18 +14,20 @@ import { ZapIcon, GearIcon, CodeIcon, BookOpenIcon, TrendingUpIcon, BriefcaseIco
 function AppSidebar({
   projects,
   collapsed,
+  mobileOpen,
   onToggle,
   onSettingsClick,
 }: {
   projects: Project[];
   collapsed: boolean;
+  mobileOpen: boolean;
   onToggle: () => void;
   onSettingsClick: () => void;
 }) {
   const location = useLocation();
 
   return (
-    <aside className={`at-sidebar${collapsed ? ' collapsed' : ''}`}>
+    <aside className={`at-sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
       {/* Logo */}
       <Link to="/" className="at-sidebar-logo" style={{ textDecoration: 'none' }}>
         <span className="at-sidebar-brand-mark">
@@ -80,8 +82,9 @@ function AppSidebar({
         </button>
       </div>
 
-      {/* Collapse toggle */}
+      {/* Collapse toggle — hidden on mobile via CSS */}
       <button
+        className="at-sidebar-collapse-toggle"
         onClick={onToggle}
         style={{
           position: 'absolute', top: '50%', right: -12,
@@ -104,7 +107,9 @@ function AppSidebar({
 function AppLayout() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsHighlightMissing, setSettingsHighlightMissing] = useState(false);
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
 
@@ -112,32 +117,60 @@ function AppLayout() {
     getProjects().then(setProjects);
   }, [location]);
 
+  // Close mobile sidebar on navigation
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  const isMobile = () => window.innerWidth <= 768;
+
+  const handleSidebarToggle = () => {
+    if (isMobile()) {
+      setMobileSidebarOpen(v => !v);
+    } else {
+      setSidebarCollapsed(c => !c);
+    }
+  };
+
+  const handleOpenSettings = (highlightMissing?: boolean) => {
+    setSettingsHighlightMissing(!!highlightMissing);
+    setShowSettings(true);
+    setMobileSidebarOpen(false);
+  };
+
   return (
     <div className="at-shell">
       {!isLandingPage && (
-        <AppSidebar
-          projects={projects}
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(c => !c)}
-          onSettingsClick={() => setShowSettings(true)}
-        />
+        <>
+          <div
+            className={`at-sidebar-mobile-overlay${mobileSidebarOpen ? ' visible' : ''}`}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <AppSidebar
+            projects={projects}
+            collapsed={sidebarCollapsed}
+            mobileOpen={mobileSidebarOpen}
+            onToggle={handleSidebarToggle}
+            onSettingsClick={() => handleOpenSettings()}
+          />
+        </>
       )}
 
       <div className="at-main" style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="at-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <Outlet context={{ onSidebarToggle: () => setSidebarCollapsed(c => !c) }} />
+          <Outlet context={{ onSidebarToggle: handleSidebarToggle, onOpenSettings: handleOpenSettings }} />
         </div>
       </div>
 
       {showSettings && (
         <div className="at-modal-backdrop" onClick={() => setShowSettings(false)}>
-          <div className="at-modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
+          <div className="at-modal at-settings-modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
             <div className="at-modal-header">
               <span style={{ fontWeight: 700, fontSize: 16 }}>Settings</span>
               <button className="at-btn at-btn-ghost" onClick={() => setShowSettings(false)} style={{ padding: '4px 8px' }}>✕</button>
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
-              <SettingsPanel onClose={() => setShowSettings(false)} />
+              <SettingsPanel onClose={() => setShowSettings(false)} highlightMissing={settingsHighlightMissing} />
             </div>
           </div>
         </div>
