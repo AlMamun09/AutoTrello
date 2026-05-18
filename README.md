@@ -23,7 +23,9 @@ AutoTrello is a **local-first, privacy-focused** project management tool that tr
 
 ## 📸 Screenshots
 
-> *Add screenshots here once available.*
+![AutoTrello AI Landing Page](public\landing.png)
+
+> *AutoTrello AI transforms your project documents into structured Kanban backlogs in seconds.*
 
 ## 🛠 Tech Stack
 
