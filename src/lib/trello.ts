@@ -122,6 +122,26 @@ export async function pushToTrello(project: Project, tasks: Task[], onProgress: 
   return board.url;
 }
 
+function parseTrelloError(raw: string, status: number): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return `Trello connection failed (${status}): ${raw || 'No response body'}`;
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  // Trello style: { message: "..." } or { error: "..." }
+  const message = obj.message ?? obj.error ?? obj.reason;
+  if (typeof message === 'string' && message.length > 0) {
+    return `Trello connection failed (${status}): ${message}`;
+  }
+
+  const snippet = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+  return `Trello connection failed (${status}): ${snippet || 'No response body'}`;
+}
+
 export async function testTrelloConnection(): Promise<string> {
   const settings = getSettings();
   if (!settings.trelloApiKey || !settings.trelloToken) {
@@ -141,7 +161,8 @@ export async function testTrelloConnection(): Promise<string> {
   const res = await fetch(`${baseUrl}/members/me?key=${key}&token=${token}`);
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Trello connection failed (${res.status}): ${text}`);
+    const readable = parseTrelloError(text, res.status);
+    throw new Error(readable);
   }
 
   const data = await res.json();

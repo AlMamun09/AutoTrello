@@ -6,6 +6,7 @@ import { NewProjectForm } from './components/projects/NewProjectForm';
 import { ProjectsList } from './components/projects/ProjectsList';
 import { LandingPage } from './components/LandingPage';
 import { getProjects, type Project } from './lib/db';
+import { ToastProvider } from './components/ui/Toast';
 
 import { Outlet } from 'react-router-dom';
 import { ZapIcon, GearIcon, CodeIcon, BookOpenIcon, TrendingUpIcon, BriefcaseIcon, FolderIcon, UsersIcon, TagIcon, SettingsIcon, LayoutIcon } from '@/lib/icons';
@@ -76,7 +77,7 @@ function AppSidebar({
 
       {/* Footer */}
       <div className="at-sidebar-footer">
-        <button onClick={onSettingsClick} className="at-settings-button" title="Settings">
+        <button onClick={onSettingsClick} className="at-settings-button" title="Settings" aria-label="Open settings">
           <GearIcon />
           <span className="at-settings-label">Settings</span>
         </button>
@@ -86,6 +87,7 @@ function AppSidebar({
       <button
         className="at-sidebar-collapse-toggle"
         onClick={onToggle}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         style={{
           position: 'absolute', top: '50%', right: -12,
           transform: 'translateY(-50%)',
@@ -121,6 +123,15 @@ function AppLayout() {
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [location.pathname]);
+
+  // Escape key closes settings
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showSettings) setShowSettings(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showSettings]);
 
   const isMobile = () => window.innerWidth <= 768;
 
@@ -163,11 +174,13 @@ function AppLayout() {
       </div>
 
       {showSettings && (
-        <div className="at-modal-backdrop" onClick={() => setShowSettings(false)}>
+        <div className="at-modal-backdrop" onClick={() => setShowSettings(false)} role="dialog" aria-modal="true" aria-labelledby="settings-title">
           <div className="at-modal at-settings-modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
             <div className="at-modal-header">
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Settings</span>
-              <button className="at-btn at-btn-ghost" onClick={() => setShowSettings(false)} style={{ padding: '4px 8px' }}>✕</button>
+              <span id="settings-title" style={{ fontWeight: 700, fontSize: 16 }}>Settings</span>
+              <button className="at-btn at-btn-ghost" onClick={() => setShowSettings(false)} style={{ padding: '8px' }} aria-label="Close settings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
             <div style={{ overflowY: 'auto', flex: 1 }}>
               <SettingsPanel onClose={() => setShowSettings(false)} highlightMissing={settingsHighlightMissing} />
@@ -182,15 +195,17 @@ function AppLayout() {
 // ── Root App ───────────────────────────────────────────────────────
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<LandingPage />} />
-          <Route path="projects" element={<ProjectsList />} />
-          <Route path="project/new" element={<NewProjectForm />} />
-          <Route path="project/:projectId" element={<KanbanBoard />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<LandingPage />} />
+            <Route path="projects" element={<ProjectsList />} />
+            <Route path="project/new" element={<NewProjectForm />} />
+            <Route path="project/:projectId" element={<KanbanBoard />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }

@@ -79,7 +79,10 @@ export function SettingsPanel({ onClose, highlightMissing }: { onClose?: () => v
       const msg = await testAiConnection();
       setAiMsg(`Connected to ${settings?.aiModelName || 'AI'}: "${msg}"`);
     } catch (err: unknown) {
-      setAiMsg(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      const raw = err instanceof Error ? err.message : String(err);
+      // Strip the "AI API Error (NNN): " prefix — the error box already shows "Connection failed"
+      const cleaned = raw.replace(/^AI API Error \(\d+\):\s*/, '');
+      setAiMsg(`Error: ${cleaned}`);
     } finally {
       setTestingAi(false);
     }
@@ -93,7 +96,9 @@ export function SettingsPanel({ onClose, highlightMissing }: { onClose?: () => v
       const msg = await testTrelloConnection();
       setTrelloMsg(msg);
     } catch (err: unknown) {
-      setTrelloMsg(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      const raw = err instanceof Error ? err.message : String(err);
+      const cleaned = raw.replace(/^Trello connection failed \(\d+\):\s*/, '');
+      setTrelloMsg(`Error: ${cleaned}`);
     } finally {
       setTestingTrello(false);
     }
@@ -174,14 +179,86 @@ export function SettingsPanel({ onClose, highlightMissing }: { onClose?: () => v
           </div>
         </div>
         
-        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button className="at-btn at-btn-secondary" onClick={handleConnectAi} disabled={testingAi}>
-            {testingAi ? <><div className="at-spinner" style={{ marginRight: 6 }}/> Connecting...</> : 'Connect AI'}
-          </button>
-          <button className="at-btn at-btn-ghost" onClick={() => handleSave('ai')} style={{ color: '#38BDF8' }}>
-            Save AI Settings
-          </button>
-          {aiMsg && <div style={{ width: '100%', fontSize: 12, color: aiMsg.startsWith('Error') ? '#EF4444' : '#22C55E', marginTop: 4 }}>{aiMsg}</div>}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button className="at-btn at-btn-secondary" onClick={handleConnectAi} disabled={testingAi}>
+              {testingAi ? <><div className="at-spinner" style={{ marginRight: 6 }}/> Connecting...</> : 'Connect AI'}
+            </button>
+            <button className="at-btn at-btn-ghost" onClick={() => handleSave('ai')} style={{ color: '#38BDF8' }}>
+              Save AI Settings
+            </button>
+          </div>
+
+          {/* AI connection feedback */}
+          {aiMsg && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: '14px 16px',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                animation: 'at-slide-up 0.2s ease-out',
+              }}
+              role={aiMsg.startsWith('Error') ? 'alert' : 'status'}
+            >
+              {aiMsg.startsWith('Error') ? (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#FCA5A5',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#FCA5A5', marginBottom: 4 }}>Connection failed</div>
+                    <div style={{ fontSize: 12, color: '#FDB4B4', lineHeight: 1.55, wordBreak: 'break-word' }}>
+                      {aiMsg.replace(/^Error:\s*/, '')}
+                    </div>
+                  </div>
+                </>
+              ) : testingAi ? (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#93C5FD',
+                  }}>
+                    <div className="at-spinner" style={{ width: 18, height: 18, borderWidth: 2.5 }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#93C5FD' }}>Testing connection…</div>
+                    <div style={{ fontSize: 12, color: '#6F86A3', marginTop: 2 }}>Please wait while we verify your settings.</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#86EFAC',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#86EFAC', marginBottom: 4 }}>Connected successfully</div>
+                    <div style={{ fontSize: 12, color: '#BBF7D0', lineHeight: 1.55 }}>
+                      {aiMsg}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -213,14 +290,86 @@ export function SettingsPanel({ onClose, highlightMissing }: { onClose?: () => v
           Get your Key & Token here →
         </a>
 
-        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button className="at-btn at-btn-secondary" onClick={handleConnectTrello} disabled={testingTrello}>
-            {testingTrello ? <><div className="at-spinner" style={{ marginRight: 6 }}/> Connecting...</> : 'Connect Trello'}
-          </button>
-          <button className="at-btn at-btn-ghost" onClick={() => handleSave('trello')} style={{ color: '#38BDF8' }}>
-            Save Trello Settings
-          </button>
-          {trelloMsg && <div style={{ width: '100%', fontSize: 12, color: trelloMsg.startsWith('Error') ? '#EF4444' : '#22C55E', marginTop: 4 }}>{trelloMsg}</div>}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button className="at-btn at-btn-secondary" onClick={handleConnectTrello} disabled={testingTrello}>
+              {testingTrello ? <><div className="at-spinner" style={{ marginRight: 6 }}/> Connecting...</> : 'Connect Trello'}
+            </button>
+            <button className="at-btn at-btn-ghost" onClick={() => handleSave('trello')} style={{ color: '#38BDF8' }}>
+              Save Trello Settings
+            </button>
+          </div>
+
+          {/* Trello connection feedback */}
+          {trelloMsg && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: '14px 16px',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                animation: 'at-slide-up 0.2s ease-out',
+              }}
+              role={trelloMsg.startsWith('Error') ? 'alert' : 'status'}
+            >
+              {trelloMsg.startsWith('Error') ? (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#FCA5A5',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#FCA5A5', marginBottom: 4 }}>Connection failed</div>
+                    <div style={{ fontSize: 12, color: '#FDB4B4', lineHeight: 1.55, wordBreak: 'break-word' }}>
+                      {trelloMsg.replace(/^Error:\s*/, '')}
+                    </div>
+                  </div>
+                </>
+              ) : testingTrello ? (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#93C5FD',
+                  }}>
+                    <div className="at-spinner" style={{ width: 18, height: 18, borderWidth: 2.5 }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#93C5FD' }}>Testing connection…</div>
+                    <div style={{ fontSize: 12, color: '#6F86A3', marginTop: 2 }}>Please wait while we verify your settings.</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0, borderRadius: 10,
+                    background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#86EFAC',
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/>
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#86EFAC', marginBottom: 4 }}>Connected successfully</div>
+                    <div style={{ fontSize: 12, color: '#BBF7D0', lineHeight: 1.55 }}>
+                      {trelloMsg}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

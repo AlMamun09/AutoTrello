@@ -44,7 +44,10 @@ export function SortableTaskCard({ task, onClick }: { task: Task; onClick: () =>
         <div className="at-card-desc">{task.description}</div>
       )}
       <div className="at-card-footer">
-        <span className={`at-badge at-badge-${task.priority}`}>{task.priority}</span>
+        <span className={`at-badge at-badge-${task.priority}`}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} aria-hidden="true" />
+          {task.priority}
+        </span>
         {tag && <span className="at-tag">{tag}</span>}
         {task.due_date && <span className="at-tag">Due {task.due_date}</span>}
         {task.estimate && <span className="at-tag">{task.estimate}</span>}

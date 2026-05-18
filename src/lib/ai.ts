@@ -97,6 +97,8 @@ function getAiUrl(baseUrl: string) {
   else if (normalized === 'https://api.openai.com') normalized = 'https://api.openai.com/v1';
   else if (normalized === 'https://openrouter.ai/api') normalized = 'https://openrouter.ai/api/v1';
   else if (normalized === 'http://localhost:1234') normalized = 'http://localhost:1234/v1';
+  else if (normalized === 'https://opencode.ai') normalized = 'https://opencode.ai/zen/v1';
+  else if (normalized === 'https://opencode.ai/zen') normalized = 'https://opencode.ai/zen/v1';
 
   if (
     typeof window !== 'undefined' &&
@@ -107,9 +109,89 @@ function getAiUrl(baseUrl: string) {
     return `/api/huggingface${routerPath.endsWith('/chat/completions') ? routerPath : `${routerPath}/chat/completions`}`;
   }
 
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'localhost' &&
+    normalized.startsWith('https://opencode.ai')
+  ) {
+    const openCodePath = normalized.replace('https://opencode.ai', '');
+    return `/api/opencode${openCodePath}`;
+  }
+
   return normalized.endsWith('/chat/completions')
     ? normalized
     : `${normalized}/chat/completions`;
+}
+
+function validateBaseUrl(baseUrl: string): string | null {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) return null;
+  
+  const lower = trimmed.toLowerCase();
+  
+  // Allow opencode.ai as a valid AI provider
+  const allowedDomains = [
+    'opencode.ai',
+    'api.openai.com',
+    'api.groq.com',
+    'openrouter.ai',
+    'router.huggingface.co',
+    'huggingface.co',
+    'api.anthropic.com',
+    'api.cohere.ai',
+    'localhost',
+    '127.0.0.1',
+  ];
+  
+  const isAllowed = allowedDomains.some(domain => lower.includes(domain));
+  
+  if (!isAllowed) {
+    return `Base URL "${trimmed}" does not match a known AI provider. Verify the URL is correct, or use one of:
+- https://api.openai.com/v1 (OpenAI)
+- https://api.groq.com/openai/v1 (Groq)
+- https://openrouter.ai/api/v1 (OpenRouter)
+- https://opencode.ai/zen/v1/chat/completions (OpenCode)
+- http://localhost:1234/v1 (LM Studio)`;
+  }
+  
+  try {
+    new URL(trimmed);
+    return null;
+  } catch {
+    return `Invalid Base URL format: "${trimmed}". Must be a valid URL like https://api.openai.com/v1`;
+  }
+}
+
+function parseApiError(raw: string, status: number): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return `AI API Error (${status}): ${raw || 'No response body'}`;
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  // OpenAI / OpenRouter / Groq style: { error: { message: "..." } }
+  const errorObj = obj.error as Record<string, unknown> | undefined;
+  if (errorObj && typeof errorObj.message === 'string') {
+    return `AI API Error (${status}): ${errorObj.message}`;
+  }
+
+  // HuggingFace style: { error: "message" }
+  if (typeof obj.error === 'string') {
+    return `AI API Error (${status}): ${obj.error}`;
+  }
+
+  // Generic: try to find any "message" or "detail" field
+  const message = obj.message ?? obj.detail ?? obj.reason;
+  if (typeof message === 'string' && message.length > 0) {
+    return `AI API Error (${status}): ${message}`;
+  }
+
+  // Fallback: show status and a short snippet
+  const snippet = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+  return `AI API Error (${status}): ${snippet || 'No response body'}`;
 }
 
 function getNetworkErrorMessage(err: unknown, url: string) {
@@ -165,7 +247,8 @@ async function postChatCompletion(
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`AI API Error (${response.status}): ${errText}`);
+      const readable = parseApiError(errText, response.status);
+      throw new Error(readable);
     }
 
     return (await response.json()) as ChatCompletionResponse;
@@ -174,6 +257,74 @@ async function postChatCompletion(
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+function extractBacklogJson(raw: string, template: ProjectTemplate): { ok: true; value: GeneratedBacklog } | { ok: false; error: string } {
+  // Step 1: Strip markdown code fences
+  let cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+  // Step 2: Try to find a JSON object in the text
+  // Look for the first '{' and last '}' to extract the JSON block
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return { ok: false, error: 'No JSON object found in the AI response.' };
+  }
+
+  const jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (err: unknown) {
+    // If parsing fails, try to fix common JSON issues
+    const fixed = tryFixJson(jsonStr);
+    if (fixed) {
+      try {
+        parsed = JSON.parse(fixed);
+      } catch {
+        // Fall through to error
+      }
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      const parseErr = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: `Invalid JSON: ${parseErr}. The AI returned malformed data.` };
+    }
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  // Step 3: Validate required fields
+  if (!Array.isArray(obj.tasks)) {
+    // Check if tasks might be nested under a different key
+    const taskKey = Object.keys(obj).find(k =>
+      k.toLowerCase().includes('task') && Array.isArray(obj[k])
+    );
+    if (taskKey) {
+      obj.tasks = obj[taskKey];
+    } else {
+      return { ok: false, error: `Response JSON is missing the "tasks" array. The AI returned: ${Object.keys(obj).join(', ') || '(empty object)'}` };
+    }
+  }
+
+  // Step 4: Normalize and return
+  const columns = normalizeColumns(obj.columns, template.columns);
+  const tasks = (obj.tasks as Partial<GeneratedTask>[]).map(task => normalizeGeneratedTask(task, columns));
+
+  return { ok: true, value: { columns, tasks } };
+}
+
+function tryFixJson(json: string): string | null {
+  // Remove trailing commas before closing braces/brackets
+  let fixed = json.replace(/,\s*([}\]])/g, '$1');
+
+  // Escape unescaped newlines in string values
+  fixed = fixed.replace(/(?<="[^"]*)\\n(?=[^"]*")/g, '\\\\n');
+
+  // Replace single quotes with double quotes (risky but sometimes needed)
+  // Only do this for simple cases to avoid breaking valid JSON
+  return fixed;
 }
 
 function buildBacklogPayload(
@@ -262,12 +413,15 @@ Do not include markdown blocks or any other text. Output raw JSON only.`;
 export async function generateBacklog(
   documentText: string,
   template: ProjectTemplate,
-  onProgress?: (msg: string) => void
+  onProgress?: (msg: string, percent: number) => void
 ): Promise<GeneratedBacklog> {
   const settings = getSettings();
   if (!settings.aiApiKey) {
     throw new Error('AI API Key is missing. Please configure it in Settings.');
   }
+
+  const urlError = validateBaseUrl(settings.aiBaseUrl);
+  if (urlError) throw new Error(urlError);
 
   const url = getAiUrl(settings.aiBaseUrl);
   const model = settings.aiModelName || 'gpt-4o-mini';
@@ -275,7 +429,7 @@ export async function generateBacklog(
   const firstMode: BacklogPayloadMode = routerMode ? 'router' : 'full';
   const firstLimit = routerMode ? ROUTER_DOCUMENT_LIMIT : FULL_DOCUMENT_LIMIT;
   if (onProgress) {
-    onProgress(`Sending ${Math.min(documentText.length, firstLimit).toLocaleString()} characters to AI provider...`);
+    onProgress(`Sending ${Math.min(documentText.length, firstLimit).toLocaleString()} characters to AI provider...`, 10);
   }
 
   let data: ChatCompletionResponse;
@@ -289,33 +443,39 @@ export async function generateBacklog(
       );
     }
     if (documentText.length <= RETRY_DOCUMENT_LIMIT) throw err;
-    if (onProgress) onProgress('Initial AI request failed. Retrying with a compact SRS excerpt...');
+    if (onProgress) onProgress('Initial AI request failed. Retrying with a compact SRS excerpt...', 15);
     data = await postChatCompletion(url, settings.aiApiKey, buildBacklogPayload(documentText, template, model, 'compact'));
   }
 
-  if (onProgress) onProgress('Parsing AI response...');
+  if (onProgress) onProgress('Parsing AI response...', 75);
   let content = data.choices?.[0]?.message?.content;
-  
+
   if (!content) {
     throw new Error('Empty response from AI API');
   }
 
-  try {
-    // Strip markdown formatting if AI still outputs it
-    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(content) as { tasks?: unknown };
-    if (!Array.isArray(parsed.tasks)) {
-      throw new Error('Response JSON is missing the "tasks" array.');
-    }
-    const columns = normalizeColumns((parsed as { columns?: unknown }).columns, template.columns);
-    return {
-      columns,
-      tasks: (parsed.tasks as Partial<GeneratedTask>[]).map(task => normalizeGeneratedTask(task, columns)),
-    };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Failed to parse JSON response: ${message}`, { cause: err });
+  const parseResult = extractBacklogJson(content, template);
+  if (parseResult.ok) {
+    return parseResult.value;
   }
+
+  // Retry with compact mode if full/router mode failed
+  if (documentText.length > RETRY_DOCUMENT_LIMIT) {
+    if (onProgress) onProgress('Response format error. Retrying with compact prompt...', 65);
+    try {
+      const retryData = await postChatCompletion(url, settings.aiApiKey, buildBacklogPayload(documentText, template, model, 'compact'));
+      const retryContent = retryData.choices?.[0]?.message?.content;
+      if (retryContent) {
+        const retryResult = extractBacklogJson(retryContent, template);
+        if (retryResult.ok) return retryResult.value;
+        throw new Error(retryResult.error);
+      }
+    } catch (retryErr: unknown) {
+      if (retryErr instanceof Error && retryErr.message.startsWith('Response format')) throw retryErr;
+    }
+  }
+
+  throw new Error(`Failed to parse AI response: ${parseResult.error}`);
 }
 
 export async function testAiConnection(): Promise<string> {
@@ -323,6 +483,9 @@ export async function testAiConnection(): Promise<string> {
   if (!settings.aiApiKey) {
     throw new Error('AI API Key is missing. Please configure it in Settings.');
   }
+
+  const urlError = validateBaseUrl(settings.aiBaseUrl);
+  if (urlError) throw new Error(urlError);
 
   const payload = {
     model: settings.aiModelName || 'gpt-4o-mini',
@@ -346,6 +509,9 @@ export async function chatWithBoard(
   const settings = getSettings();
   if (!settings.aiApiKey) throw new Error('AI API Key is missing.');
 
+  const urlError = validateBaseUrl(settings.aiBaseUrl);
+  if (urlError) throw new Error(urlError);
+
   const safeColumns = columns.length ? columns : Array.from(new Set(tasks.map(t => t.column)));
   const columnCounts = safeColumns
     .map(column => `${column}: ${tasks.filter(task => task.column === column).length}`)
@@ -354,7 +520,8 @@ export async function chatWithBoard(
     .map(priority => `${priority}: ${tasks.filter(task => task.priority === priority).length}`)
     .join(', ');
 
-  const systemPrompt = `You are AutoTrello's AI Board Assistant. You help users improve a generated Kanban board and can perform safe CRUD changes when requested.
+  const systemPrompt = `You are AutoTrello's AI Board Assistant. You help users improve their Kanban boards through analysis, optimization, and safe CRUD operations.
+
 Project: "${project.name}"
 Allowed columns, in workflow order: ${safeColumns.join(' | ')}
 Column counts: ${columnCounts || 'none'}
@@ -365,7 +532,7 @@ ${tasks.map(t => `- id=${t.id} | column=${t.column} | priority=${t.priority} | t
 
 Return raw JSON only with this exact shape:
 {
-  "reply": "Concise human-readable response. Include useful reasoning, grouped recommendations, or a summary when helpful.",
+  "reply": "Concise human-readable response with grouped recommendations when helpful",
   "actions": [
     { "type": "create_task", "task": { "title": "Task title", "description": "", "priority": "Medium", "column": "${safeColumns[0] || 'Backlog'}", "subtasks": [], "labels": [], "assignee": "", "due_date": "", "estimate": "" } },
     { "type": "update_task", "task_id": "existing id", "patch": { "title": "New title", "column": "${safeColumns[0] || 'Backlog'}", "priority": "High", "subtasks": [], "labels": [] } },
@@ -373,17 +540,28 @@ Return raw JSON only with this exact shape:
   ]
 }
 
-Rules:
-- Only include actions when the user explicitly asks you to create, update, move, label, prioritize, or delete cards.
-- Use existing task ids for updates/deletes.
-- For new or updated columns, use exactly one of the allowed columns.
-- Keep subtasks as checklist item strings.
-- If the request is only a question, return an empty actions array.
-- For analysis requests, be specific: mention overloaded columns, missing workflow stages, weak priorities, missing QA/review/release/feedback work, or duplicate cards when visible.
-- For creation requests, create board-ready cards with clear descriptions, 2-5 subtasks when useful, relevant labels, and the earliest accurate allowed column.
-- When creating multiple cards, return them in planned start order and place them in the correct workflow stage rather than putting all of them in the first backlog column.
-- For "next steps" requests, recommend a short ordered plan and only create cards if the user asked for board changes.
-- Do not invent task ids. Do not update or delete a task unless the target is unambiguous.
+BOARD ANALYSIS RULES:
+- When asked to analyze, check: column distribution (>40% in one column = bottleneck), priority balance (>30% Critical/High = unrealistic), label coverage, subtask quality
+- Flag overloaded columns, empty stages, missing workflow steps, or tasks stuck without progress
+- Identify dependencies and suggest execution order
+
+TASK GENERATION RULES:
+- Titles: Start with verb or concrete noun phrase, understandable on a Kanban card
+- Descriptions: State expected outcome + acceptance criteria in 1-3 sentences
+- Columns: Place in correct workflow stage, not just backlog. Setup/infra before features, features before QA, QA before release
+- Priority: Use "Critical" only for blockers, compliance risks, or urgent business impact
+- Labels: Add 1-3 domain-relevant labels (e.g., "frontend", "qa", "urgent")
+- Subtasks: 2-5 concrete checklist steps for complex work, not duplicates of title
+
+QUALITY RULES:
+- Only include actions when user explicitly asks to create, update, move, label, prioritize, or delete
+- Use existing task IDs only for updates/deletes. Never invent IDs
+- Use exactly one of the allowed columns for any column assignment
+- Preserve existing data - only patch fields the user asked to change
+- Batch related changes together and explain reasoning in reply
+- For questions only, return empty actions array
+- For "next steps", recommend ordered plan and only create cards if explicitly asked
+- Do not update or delete a task unless the target is unambiguous
 `;
 
   const messages: ChatMessage[] = [

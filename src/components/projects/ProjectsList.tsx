@@ -105,10 +105,15 @@ export function ProjectsList() {
 
         {projects.length === 0 && (
           <div className="at-empty-state">
-            <div style={{ fontSize: 36, marginBottom: 12, color: 'var(--at-primary)' }}>AT</div>
-            <div style={{ fontSize: 16, fontWeight: 850, color: 'var(--at-text)', marginBottom: 6 }}>No projects yet</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Create a project to generate your first AI-powered backlog.</div>
-            <Link to="/project/new" className="at-btn at-btn-primary" style={{ display: 'inline-flex' }}>+ New Project</Link>
+            <div style={{ width: 64, height: 64, margin: '0 auto 16px', borderRadius: 20, background: 'rgba(184,247,212,0.1)', border: '1px solid rgba(184,247,212,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--at-primary)" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--at-text)', marginBottom: 8 }}>No projects yet</div>
+            <div style={{ fontSize: 14, color: 'var(--at-text-subtle)', marginBottom: 24, maxWidth: 320, margin: '0 auto 24px', lineHeight: 1.6 }}>Create your first project to generate an AI-powered backlog from documents or paste text requirements.</div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/project/new" className="at-btn at-btn-primary" style={{ display: 'inline-flex' }}>+ New Project</Link>
+              <button className="at-btn at-btn-secondary" onClick={() => fileInputRef.current?.click()}>Import JSON</button>
+            </div>
           </div>
         )}
 
@@ -129,10 +134,11 @@ export function ProjectsList() {
 
                   <button
                     onClick={e => requestDelete(p, e)}
-                    style={{ color: 'var(--at-text-muted)', padding: '2px 4px', fontSize: 14, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}
+                    style={{ color: 'var(--at-text-muted)', padding: '8px', fontSize: 14, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, minWidth: 40, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
                     title="Delete project"
+                    aria-label={`Delete project ${p.name}`}
                   >
-                    x
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                   </button>
                 </div>
 

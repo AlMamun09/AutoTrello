@@ -65,6 +65,12 @@ export async function getProjects() {
   return db.getAll('projects');
 }
 
+export async function projectExists(name: string, excludeId?: string): Promise<boolean> {
+  const db = await initDB();
+  const projects = await db.getAll('projects');
+  return projects.some(p => p.name.toLowerCase() === name.toLowerCase() && p.id !== excludeId);
+}
+
 export async function getProject(id: string) {
   const db = await initDB();
   return db.get('projects', id);

@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type MouseEvent } from 'react';
 import { MenuIcon, UploadIcon, DownloadIcon, GridIcon, ZapIcon, TrashIcon, GearIcon, MoreVerticalIcon } from '@/lib/icons';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 
 export function AppNavbar({
   title,
@@ -25,6 +26,8 @@ export function AppNavbar({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -33,9 +36,9 @@ export function AppNavbar({
       }
     };
     if (mobileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside as unknown as EventListener);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside as unknown as EventListener);
   }, [mobileMenuOpen]);
 
   const handleAction = (action: () => void) => {
@@ -43,10 +46,46 @@ export function AppNavbar({
     setMobileMenuOpen(false);
   };
 
+  const handleToggleMenu = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!mobileMenuOpen && moreBtnRef.current) {
+      const rect = moreBtnRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    setMobileMenuOpen(v => !v);
+  };
+
+  const dropdown = mobileMenuOpen ? (
+    <div
+      ref={menuRef}
+      className="at-mobile-dropdown"
+      style={{ top: dropdownPos.top, right: dropdownPos.right }}
+    >
+      {onImport && (
+        <button className="at-mobile-dropdown-item" onClick={() => handleAction(onImport)}>
+          <UploadIcon size={16} />
+          <span>Import</span>
+        </button>
+      )}
+      {onExport && (
+        <button className="at-mobile-dropdown-item" onClick={() => handleAction(onExport)}>
+          <DownloadIcon size={16} />
+          <span>Export</span>
+        </button>
+      )}
+      {onDelete && (
+        <button className="at-mobile-dropdown-item at-mobile-dropdown-item-danger" onClick={() => handleAction(onDelete)}>
+          <TrashIcon size={16} />
+          <span>Delete</span>
+        </button>
+      )}
+    </div>
+  ) : null;
+
   return (
     <header className="at-navbar">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-        <button className="at-btn at-btn-ghost at-navbar-menu-btn" onClick={onSidebarToggle} style={{ padding: '6px 8px', borderRadius: 8, flexShrink: 0 }}>
+        <button className="at-btn at-btn-ghost at-navbar-menu-btn" onClick={onSidebarToggle} style={{ padding: '10px', borderRadius: 8, flexShrink: 0, minWidth: 40, minHeight: 40 }} aria-label="Toggle sidebar">
           <MenuIcon size={20} />
         </button>
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -69,7 +108,8 @@ export function AppNavbar({
             className="at-btn at-btn-ghost at-navbar-settings"
             onClick={() => onOpenSettings()}
             title="Settings"
-            style={{ padding: '6px 8px', borderRadius: 8 }}
+            aria-label="Open settings"
+            style={{ padding: '10px', borderRadius: 8, minWidth: 40, minHeight: 40 }}
           >
             <GearIcon size={20} />
           </button>
@@ -106,47 +146,28 @@ export function AppNavbar({
             </div>
 
             {/* Mobile: more menu */}
-            <div className="at-navbar-actions-mobile" ref={menuRef}>
+            <div className="at-navbar-actions-mobile">
               {onSync && (
                 <button className="at-btn at-btn-primary at-btn-icon-only" onClick={onSync} title="Sync to Trello" style={{ padding: '8px', borderRadius: 8 }}>
                   <GridIcon size={18} color="#fff" />
                 </button>
               )}
               <button
+                ref={moreBtnRef}
                 className="at-btn at-btn-ghost at-btn-icon-only"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                onClick={handleToggleMenu}
                 title="More actions"
+                aria-label="More actions"
                 style={{ padding: '8px', borderRadius: 8 }}
               >
                 <MoreVerticalIcon size={18} />
               </button>
-
-              {mobileMenuOpen && (
-                <div className="at-mobile-dropdown">
-                  {onImport && (
-                    <button className="at-mobile-dropdown-item" onClick={() => handleAction(onImport)}>
-                      <UploadIcon size={16} />
-                      <span>Import</span>
-                    </button>
-                  )}
-                  {onExport && (
-                    <button className="at-mobile-dropdown-item" onClick={() => handleAction(onExport)}>
-                      <DownloadIcon size={16} />
-                      <span>Export</span>
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button className="at-mobile-dropdown-item at-mobile-dropdown-item-danger" onClick={() => handleAction(onDelete)}>
-                      <TrashIcon size={16} />
-                      <span>Delete</span>
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           </>
         )}
       </div>
+
+      {typeof document !== 'undefined' && createPortal(dropdown, document.body)}
     </header>
   );
 }

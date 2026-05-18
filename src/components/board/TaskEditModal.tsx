@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, useEffect, useRef } from 'react';
 import type { Task } from '@/lib/db';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 
@@ -32,6 +32,39 @@ export function TaskEditModal({
   const [newLabel, setNewLabel] = useState('');
   const [newAttachment, setNewAttachment] = useState('');
   const [newComment, setNewComment] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Escape key support
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  // Focus trap
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+    const focusable = modal.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first?.focus();
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    modal.addEventListener('keydown', handleTab);
+    return () => modal.removeEventListener('keydown', handleTab);
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -78,15 +111,17 @@ export function TaskEditModal({
   const updatedDate = new Date(task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <div className="at-modal-backdrop" onClick={onClose}>
-      <div className="at-modal at-task-modal" onClick={e => e.stopPropagation()}>
+    <div className="at-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="task-edit-title">
+      <div className="at-modal at-task-modal" ref={modalRef} onClick={e => e.stopPropagation()}>
         <div className="at-card-cover" style={{ background: edited.cover_color || 'linear-gradient(135deg, rgba(184,247,212,0.5), rgba(125,211,252,0.55))' }} />
 
         <div className="at-modal-header">
-          <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--at-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <span id="task-edit-title" style={{ fontSize: 11, fontWeight: 900, color: 'var(--at-primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             CARD-{task.id.slice(0, 5).toUpperCase()}
           </span>
-          <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}>x</button>
+          <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '8px' }} aria-label="Close task editor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
 
         <div className="at-task-split">

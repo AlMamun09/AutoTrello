@@ -11,6 +11,7 @@ import { pushToTrello } from '@/lib/trello';
 import { AppNavbar } from '@/components/AppNavbar';
 import { DeleteProjectDialog } from '@/components/projects/DeleteProjectDialog';
 import type { BoardAgentAction } from '@/lib/ai';
+import { useToast } from '@/components/ui/Toast';
 
 // Column accent colors
 const COL_COLORS: Record<string, string> = {
@@ -124,7 +125,9 @@ function TrelloSyncPanel({ project, tasks, onClose }: {
           </svg>
           <span>Sync to Trello</span>
         </div>
-        <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '4px 6px' }}>✕</button>
+        <button className="at-btn at-btn-ghost" onClick={onClose} style={{ padding: '8px', minWidth: 40, minHeight: 40 }} aria-label="Close Trello sync panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
       <div className="at-panel-content" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div className="at-form-group">
@@ -193,10 +196,11 @@ export function KanbanBoard() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { onSidebarToggle, onOpenSettings } = useOutletContext<{ onSidebarToggle: () => void; onOpenSettings: (highlightMissing?: boolean) => void }>();
+  const { addToast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [srsCollapsed, setSrsCollapsed] = useState(false);
+  const [srsCollapsed, setSrsCollapsed] = useState(true);
   const [showTrello, setShowTrello] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
@@ -258,12 +262,34 @@ export function KanbanBoard() {
       const updated = { ...activeTask, column: targetColumn, updated_at: new Date().toISOString() };
       setTasks(prev => prev.map(t => t.id === activeTask.id ? updated : t));
       await saveTask(updated);
+      addToast(`Moved "${activeTask.title}" to ${targetColumn}`, 'success', 3000);
     }
   };
 
   if (!project) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: '#64748B', fontSize: 14 }}>
-      Loading project…
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 28px', borderBottom: '1px solid var(--at-border)' }}>
+        <div className="at-skeleton" style={{ height: 20, width: 200 }} />
+      </div>
+      <div className="at-kanban-board">
+        {[1, 2, 3, 4].map(col => (
+          <div key={col} className="at-kanban-col">
+            <div className="at-col-header">
+              <div className="at-skeleton" style={{ height: 12, width: 80 }} />
+              <div className="at-skeleton" style={{ height: 16, width: 24, borderRadius: 99 }} />
+            </div>
+            <div className="at-col-body">
+              {[1, 2, 3].map(card => (
+                <div key={card} className="at-skeleton-card">
+                  <div className="at-skeleton at-skeleton-title" />
+                  <div className="at-skeleton at-skeleton-desc" />
+                  <div className="at-skeleton at-skeleton-badge" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -492,15 +518,17 @@ export function KanbanBoard() {
           task={editingTask}
           columns={columns}
           onClose={() => setEditingTask(null)}
-          onSave={async updated => { 
-            await saveTask(updated); 
-            setTasks(prev => prev.some(t => t.id === updated.id) ? prev.map(t => t.id === updated.id ? updated : t) : [...prev, updated]); 
-            setEditingTask(null); 
+          onSave={async updated => {
+            await saveTask(updated);
+            setTasks(prev => prev.some(t => t.id === updated.id) ? prev.map(t => t.id === updated.id ? updated : t) : [...prev, updated]);
+            setEditingTask(null);
+            addToast('Card saved successfully', 'success');
           }}
           onDelete={async () => {
             await deleteTask(editingTask.id);
             setTasks(tasks.filter(t => t.id !== editingTask.id));
             setEditingTask(null);
+            addToast('Card deleted', 'info');
           }}
           onPromote={async (title) => {
             const now = new Date().toISOString();

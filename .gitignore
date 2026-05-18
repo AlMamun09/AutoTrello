@@ -36,6 +36,11 @@ srs.md
 exports/
 *.autotrello.json
 
+# Agent skills and configuration (auto-generated)
+.agents/
+.openclaude/
+skills-lock.json
+
 # OS files
 .DS_Store
 Thumbs.db

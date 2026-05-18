@@ -14,6 +14,12 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/api\/huggingface/, ''),
       },
+      '/api/opencode': {
+        target: 'https://opencode.ai',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api\/opencode/, ''),
+      },
     },
   },
   resolve: {

@@ -1,79 +1,153 @@
-# AutoTrello 🚀
+# AutoTrello
 
-AutoTrello is a local-first, privacy-focused React application that transforms project documents (SRS, business briefs, course plans) into structured Kanban backlogs. Using advanced AI, it drafts your board in seconds and provides seamless synchronization with Trello for production-ready project management.
+> Turn messy specs into polished Kanban boards — entirely in your browser.
 
-![Premium UI](https://img.shields.io/badge/UI-Premium-blueviolet)
-![Local First](https://img.shields.io/badge/Data-Local--First-green)
-![AI Powered](https://img.shields.io/badge/AI-Backlog--Gen-orange)
+AutoTrello is a **local-first, privacy-focused** project management tool that transforms documents (SRS, business briefs, course plans, meeting notes) into structured Kanban backlogs using AI. All data stays in your browser. No accounts, no servers, no tracking.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Local First](https://img.shields.io/badge/Data-Local--First-green)]()
+[![AI Powered](https://img.shields.io/badge/AI-Backlog--Gen-orange)]()
+[![React 19](https://img.shields.io/badge/React-19-blue)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)]()
 
 ## ✨ Features
 
-- **AI Backlog Generation**: Upload PDF, DOCX, TXT, Markdown, or CSV files and watch the AI generate a complete set of tasks, epics, and subtasks.
-- **Local-First Storage**: All your project data and API keys stay strictly in your browser (IndexedDB), ensuring maximum privacy.
-- **Interactive Kanban Board**: Fully functional drag-and-drop interface with column-specific colors and "Quick Add" capabilities.
-- **Premium Task Management**:
-  - **Promote to Task**: Easily convert subtasks/checklist items into full-fledged tasks.
-  - **Custom UI**: Beautiful Glassmorphism dropdowns for status and priority.
-  - **Rich Metadata**: Track assignees, estimates, due dates, and attachments.
-- **Workflow Templates**: Built-in specialized boards for SDLC, HR, CRM, Marketing, Operations, Design, Small Business, and Education.
-- **AI Board Assistant**: Chat with your board to refine tasks, brainstorm subtasks, or reorganize your project.
-- **Trello Synchronization**: Create Trello boards, lists, and cards (including checklists and labels) with one click.
-- **Export/Import**: Save your work as JSON for backups or sharing.
+- **AI Backlog Generation** — Upload PDF, DOCX, TXT, or Markdown files (or paste text) and get a complete Kanban backlog with tasks, priorities, labels, and subtasks in seconds.
+- **100% Local-First** — All project data lives in your browser's IndexedDB. No cloud database, no authentication, no telemetry.
+- **Interactive Kanban Board** — Drag-and-drop cards between columns with real-time persistence.
+- **Workflow Templates** — Pre-built boards for Software Development, HR, CRM, Marketing, Operations, Design, Small Business, and Education.
+- **AI Board Assistant** — Chat with your board to spot gaps, suggest tasks, or reorganize priorities.
+- **Trello Sync** — Push your entire backlog to a real Trello board with lists, cards, checklists, and colored labels — one click.
+- **Import / Export** — Back up or share projects as JSON files.
+- **Bring Your Own Key** — Connect to any OpenAI-compatible API (OpenAI, OpenRouter, Groq, LM Studio, vLLM, HuggingFace).
+
+## 📸 Screenshots
+
+> *Add screenshots here once available.*
 
 ## 🛠 Tech Stack
 
-- **Framework**: React 19 + Vite
-- **Styling**: Tailwind CSS v4 (Modern CSS-first approach)
-- **State & DB**: IndexedDB (via `idb`) + Zustand
-- **Interactions**: `@dnd-kit` for robust drag-and-drop
-- **AI**: OpenAI-compatible API integration (BYOK - Bring Your Own Key)
-- **Parsing**: `pdfjs-dist` & `mammoth` for client-side document processing
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 + TypeScript + Vite |
+| Styling | Tailwind CSS v4 |
+| State & Storage | IndexedDB (`idb`) + Zustand |
+| Drag & Drop | `@dnd-kit/core` + `@dnd-kit/sortable` |
+| AI Integration | OpenAI-compatible API (BYOK) |
+| Document Parsing | `pdfjs-dist` + `mammoth` |
+| Routing | React Router v7 |
 
 ## 🚀 Getting Started
 
-1. **Clone and Install**:
-   ```bash
-   git clone https://github.com/AlMamun09/AutoTrello.git
-   cd AutoTrello
-   npm install
-   ```
-2. **Run Locally**:
-   ```bash
-   npm run dev
-   ```
-3. **Configure Settings**:
-   - Open the sidebar and click the **Settings** gear.
-   - Enter your **AI Provider** details (Base URL, API Key, Model).
-   - (Optional) Enter your **Trello API Key and Token** for sync features.
+### Prerequisites
+
+- Node.js 18+ and npm (or pnpm/yarn)
+- An API key from an OpenAI-compatible provider (OpenAI, OpenRouter, Groq, etc.)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/AlMamun09/AutoTrello.git
+cd AutoTrello
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+The app will open at `http://localhost:5173`.
+
+### Configuration
+
+1. Click **Settings** in the sidebar.
+2. Enter your **AI Provider** details:
+   - **Base URL** — e.g., `https://api.openai.com/v1`
+   - **API Key** — your provider's API key
+   - **Model** — e.g., `gpt-4o`, `llama-3-70b`
+3. *(Optional)* Add **Trello API Key** and **Token** for board sync.
+
+That's it. No sign-up, no server setup.
+
+## 📁 Project Structure
+
+```
+src/
+├── components/
+│   ├── board/          # Kanban board, task cards, AI chat
+│   ├── projects/       # Project list, new project form, generation modal
+│   ├── settings/       # Settings panel (AI + Trello config)
+│   └── ui/             # Reusable UI components (buttons, selects, toasts)
+├── lib/
+│   ├── ai.ts           # AI API calls, backlog generation, board assistant
+│   ├── db.ts           # IndexedDB schema and CRUD operations
+│   ├── templates.ts    # Workflow template definitions and prompts
+│   ├── trello.ts       # Trello API integration
+│   ├── parser.ts       # Document parsing (PDF, DOCX, TXT, MD)
+│   └── export.ts       # JSON import/export utilities
+└── App.tsx             # Router and layout
+```
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Whether you are fixing a bug, adding a feature, or improving documentation, your help is appreciated.
+Contributions are welcome! Here's how to get started:
 
-1. **Fork the repository**.
-2. **Create a feature branch** (`git checkout -b feature/AmazingFeature`).
-3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`).
-4. **Push to the branch** (`git push origin feature/AmazingFeature`).
-5. **Open a Pull Request**.
+```bash
+# Fork and clone the repo
+git clone https://github.com/YOUR_USERNAME/AutoTrello.git
+cd AutoTrello
 
-### Areas for Contribution:
-- **UI/UX**: New themes, dark mode refinements, or micro-animations.
-- **Templates**: New industry-specific workflow templates in `src/lib/templates.ts`.
-- **Integrations**: Support for GitHub Issues, Jira, or Notion.
-- **AI Capabilities**: Improving agent tools and backlog generation prompts.
+# Create a feature branch
+git checkout -b feature/your-feature-name
 
-## 🔮 Future Scope
+# Make your changes, then commit
+git commit -m "feat: add your feature description"
 
-- [ ] **Multi-Board Views**: Support for project-wide dashboards and cross-project task tracking.
-- [ ] **P2P Collaboration**: Real-time board sharing using WebRTC/CRDTs without a central server.
-- [ ] **Extended Integrations**: Bi-directional sync with GitHub, GitLab, and Jira.
-- [ ] **AI-Powered Sprints**: Automated task estimation and sprint planning suggestions.
-- [ ] **Chrome Extension**: Quick-capture tasks from any website directly into your AutoTrello backlog.
-- [ ] **Mobile Support**: PWA optimization and native mobile wrappers for on-the-go management.
+# Push and open a Pull Request
+git push origin feature/your-feature-name
+```
+
+### Good First Contributions
+
+- **UI/UX** — Refine dark mode, add animations, improve mobile responsiveness
+- **Templates** — Add new industry-specific workflows in `src/lib/templates.ts`
+- **Integrations** — Add support for GitHub Issues, Jira, Notion, or Linear
+- **AI Prompts** — Improve backlog generation quality or agent capabilities
+- **Accessibility** — Add keyboard navigation, screen reader support, focus management
+- **Documentation** — Improve README, add screenshots, write guides
+
+### Development Scripts
+
+```bash
+npm run dev      # Start dev server
+npm run build    # Production build
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
+```
+
+## 🔮 Roadmap
+
+- [ ] Multi-board dashboards and cross-project views
+- [ ] P2P board sharing via WebRTC (no server required)
+- [ ] Bi-directional sync with GitHub Issues, GitLab, Jira
+- [ ] AI-powered sprint planning and effort estimation
+- [ ] PWA support for offline mobile use
+- [ ] Custom column creation and board customization
+- [ ] Activity log and undo/redo for board changes
 
 ## 📜 License
 
-This project is currently unlicensed. We are in the process of selecting an open-source license.
+This project is open source under the [MIT License](LICENSE).
+
+## 🙏 Acknowledgments
+
+- [Trello](https://trello.com) for inspiring the Kanban experience
+- [OpenAI](https://openai.com) and community for accessible AI APIs
+- [dnd-kit](https://dndkit.com) for excellent drag-and-drop primitives
+- All contributors who help make this project better
 
 ---
-*Built with ❤️ for privacy-conscious project managers and developers.*
+
+*Built with ❤️ for privacy-conscious teams and developers.*
